@@ -18,10 +18,11 @@ const alice = 'alice'
 const bob = 'bob'
 const carol = 'carol'
 
+const content = [0x4, 0x5] as u8[];
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
 
     // Alice calls `grant_access` to make Bob her escrow
     VMContext.setPredecessor_account_id(alice)
@@ -39,7 +40,7 @@ describe('revoke_access', () => {
     VMContext.setStorage_usage(100)
 
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
 
     // Alice makes Bob her escrow
     VMContext.setPredecessor_account_id(alice)
@@ -62,7 +63,7 @@ describe('revoke_access', () => {
 describe('transfer_from', () => {
   it('allows owner to transfer given `token_id` to given `owner_id`', () => {
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -81,7 +82,7 @@ describe('transfer_from', () => {
     grant_access(bob)
 
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -101,7 +102,7 @@ describe('transfer_from', () => {
       grant_access(bob)
 
       // Alice has a token
-      const aliceToken = nonSpec.mint_to(alice)
+      const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -114,7 +115,7 @@ describe('transfer_from', () => {
   it('prevents anyone else from transferring the token', () => {
     expect(() => {
       // Alice has a token
-      const aliceToken = nonSpec.mint_to(alice)
+      const aliceToken = nonSpec.mint_to(alice, content)
 
       // Bob tries to transfer it to himself
       VMContext.setPredecessor_account_id(bob)
@@ -126,7 +127,7 @@ describe('transfer_from', () => {
 describe('transfer', () => {
   it('allows owner to transfer given `token_id` to given `owner_id`', () => {
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -146,7 +147,7 @@ describe('transfer', () => {
       grant_access(bob)
 
       // Alice has a token
-      const aliceToken = nonSpec.mint_to(alice)
+      const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -162,7 +163,7 @@ describe('transfer', () => {
       VMContext.setPredecessor_account_id(alice)
 
       // Alice has a token
-      const aliceToken = nonSpec.mint_to(alice)
+      const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
 
@@ -177,7 +178,7 @@ describe('transfer', () => {
 describe('check_access', () => {
   it('returns true if caller of the function has access to the token', () => {
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
 
     // Alice grants access to Bob
     VMContext.setPredecessor_account_id(alice)
@@ -190,7 +191,7 @@ describe('check_access', () => {
 
   it('returns false if caller of function does not have access', () => {
     // Alice has a token
-    const aliceToken = nonSpec.mint_to(alice)
+    const aliceToken = nonSpec.mint_to(alice, content)
 
     // Bob checks if he has access
     VMContext.setPredecessor_account_id(alice)
@@ -201,8 +202,8 @@ describe('check_access', () => {
 describe('get_token_owner', () => {
   it('returns accountId of owner of given `tokenId`', () => {
     // Alice and Bob both have tokens
-    const aliceToken = nonSpec.mint_to(alice)
-    const bobToken = nonSpec.mint_to(bob)
+    const aliceToken = nonSpec.mint_to(alice, content)
+    const bobToken = nonSpec.mint_to(bob, content)
 
     // Alice owns her own token
     expect(get_token_owner(aliceToken)).toBe(alice)
@@ -220,13 +221,25 @@ describe('nonSpec interface', () => {
     expect(() => {
       let limit = nonSpec.MAX_SUPPLY
       while (limit-- > 0) {
-        nonSpec.mint_to(alice)
+        nonSpec.mint_to(alice, content)
       }
     }).not.toThrow()
 
     // minting one more than the max throws an error
     expect(() => {
-      nonSpec.mint_to(alice)
+      nonSpec.mint_to(alice, content)
     }).toThrow(nonSpec.ERROR_MAXIMUM_TOKEN_LIMIT_REACHED)
+  })
+  it('should get content', () => {
+    const tokenId = nonSpec.mint_to(alice, content)
+    VMContext.setPredecessor_account_id(alice)
+    expect(nonSpec.get_token_content(tokenId)).toStrictEqual(content);
+  })
+  it('should not be allowed to get content', () => {
+    expect(() => {
+      const tokenId = nonSpec.mint_to(alice, content)
+      VMContext.setPredecessor_account_id(bob)
+      nonSpec.get_token_content(tokenId)
+    }).toThrow(nonSpec.ERROR_TOKEN_NOT_OWNED_BY_CALLER)
   })
 })

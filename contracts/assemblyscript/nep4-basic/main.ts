@@ -6,6 +6,7 @@ import { PersistentMap, storage, context } from 'near-sdk-as'
 
 type AccountId = string
 type TokenId = u64
+type Content = u8[];
 
 // Note that MAX_SUPPLY is implemented here as a simple constant
 // It is exported only to facilitate unit testing
@@ -15,6 +16,7 @@ export const MAX_SUPPLY = u64(10)
 // Let's set them to single characters to save storage space
 const tokenToOwner = new PersistentMap<TokenId, AccountId>('a')
 
+
 // Note that with this implementation, an account can only set one escrow at a
 // time. You could make values an array of AccountIds if you need to, but this
 // complicates the code and costs more in storage rent.
@@ -22,6 +24,9 @@ const escrowAccess = new PersistentMap<AccountId, AccountId>('b')
 
 // This is a key in storage used to track the current minted supply
 const TOTAL_SUPPLY = 'c'
+
+// content behind the token
+const tokenToContent = new PersistentMap<TokenId, Content>('d')
 
 /******************/
 /* ERROR MESSAGES */
@@ -113,7 +118,7 @@ export function get_token_owner(token_id: TokenId): string {
 
 // Note that ANYONE can call this function! You probably would not want to
 // implement a real NFT like this!
-export function mint_to(owner_id: AccountId): u64 {
+export function mint_to(owner_id: AccountId, content: Content): u64 {
   // Fetch the next tokenId, using a simple indexing strategy that matches IDs
   // to current supply, defaulting the first token to ID=1
   //
@@ -127,6 +132,7 @@ export function mint_to(owner_id: AccountId): u64 {
 
   // assign ownership
   tokenToOwner.set(tokenId, owner_id)
+  tokenToContent.set(tokenId, content)
 
   // increment and store the next tokenId
   storage.set<u64>(TOTAL_SUPPLY, tokenId + 1)
@@ -134,4 +140,12 @@ export function mint_to(owner_id: AccountId): u64 {
   // return the tokenId – while typical change methods cannot return data, this
   // is handy for unit tests
   return tokenId
+}
+
+// Get content behind token
+export function get_token_content(token_id: TokenId): Content {
+  const predecessor = context.predecessor
+  const owner = tokenToOwner.getSome(token_id)
+  assert(owner == predecessor, ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  return tokenToContent.getSome(token_id);
 }
