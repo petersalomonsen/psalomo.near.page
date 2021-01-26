@@ -1,5 +1,5 @@
 import { PersistentMap, storage, context, ContractPromiseBatch } from 'near-sdk-as'
-import { u128 } from "near-sdk-core";
+import { u128 } from 'near-sdk-core';
 
 /**************************/
 /* DATA TYPES AND STORAGE */
@@ -29,7 +29,7 @@ const TOTAL_SUPPLY = 'c'
 // content behind the token
 const tokenToContent = new PersistentMap<TokenId, Content>('d')
 
-const tokenForSale = new PersistentMap<TokenId, u128>('e');
+const tokenForSale = new PersistentMap<TokenId, string>('e');
 
 /******************/
 /* ERROR MESSAGES */
@@ -156,19 +156,20 @@ export function get_token_content(token_id: TokenId): Content {
 export function sell_token(token_id: TokenId, price: u128): void {
   const predecessor = context.predecessor
   assert(predecessor == tokenToOwner.get(token_id), ERROR_TOKEN_NOT_OWNED_BY_CALLER)
-  tokenForSale.set(token_id, price)
+  tokenForSale.set(token_id, price.toString())
 }
 
 @payable()
-export function buy_token(token_id: TokenId): void {
+export function buy_token(token_id: TokenId): ContractPromiseBatch {
   const predecessor = context.predecessor
   assert(tokenForSale.contains(token_id), "Token is not for sale")
 
-  const askingPrice = tokenForSale.get(token_id)!;
+  const askingPrice = u128.from(tokenForSale.get(token_id)!);
   assert(context.attachedDeposit == askingPrice, "Method requires deposit " + askingPrice.toString())
   const owner = tokenToOwner.get(token_id)!
 
-  ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)
   tokenToOwner.set(token_id, predecessor)
   tokenForSale.delete(token_id)
+
+  return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)
 }
