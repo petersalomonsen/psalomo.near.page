@@ -1,4 +1,5 @@
 import { VMContext } from 'near-sdk-as'
+import { u128 } from "near-sdk-core";
 
 // explicitly import functions required by spec
 import {
@@ -19,6 +20,7 @@ const bob = 'bob'
 const carol = 'carol'
 
 const content = [0x4, 0x5] as u8[];
+
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
     // Alice has a token
@@ -69,6 +71,7 @@ describe('transfer_from', () => {
 
     // Alice transfers her token to Bob
     VMContext.setPredecessor_account_id(alice)
+    VMContext.setAttached_deposit(u128.from(100))
     transfer_from(alice, bob, aliceToken)
 
     // it works!
@@ -88,6 +91,7 @@ describe('transfer_from', () => {
 
     // Bob transfers to himself
     VMContext.setPredecessor_account_id(bob)
+    VMContext.setAttached_deposit(u128.from(100))
     transfer_from(alice, bob, aliceToken)
 
     // it works!
@@ -108,6 +112,7 @@ describe('transfer_from', () => {
 
       // Bob attempts to transfer and has access, but owner_id is wrong
       VMContext.setPredecessor_account_id(bob)
+      VMContext.setAttached_deposit(u128.from(100))
       transfer_from(bob, carol, aliceToken)
     }).toThrow(nonSpec.ERROR_OWNER_ID_DOES_NOT_MATCH_EXPECTATION)
   })
@@ -119,6 +124,7 @@ describe('transfer_from', () => {
 
       // Bob tries to transfer it to himself
       VMContext.setPredecessor_account_id(bob)
+      VMContext.setAttached_deposit(u128.from(100))
       transfer_from(alice, bob, aliceToken)
     }).toThrow(nonSpec.ERROR_CALLER_ID_DOES_NOT_MATCH_EXPECTATION)
   })

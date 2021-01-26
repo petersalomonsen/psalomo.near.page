@@ -1,4 +1,5 @@
 import { PersistentMap, storage, context } from 'near-sdk-as'
+import { u128 } from "near-sdk-core";
 
 /**************************/
 /* DATA TYPES AND STORAGE */
@@ -56,6 +57,7 @@ export function revoke_access(escrow_account_id: string): void {
 // Transfer the given `token_id` to the given `new_owner_id`. Account `new_owner_id` becomes the new owner.
 // Requirements:
 // * The caller of the function (`predecessor`) should have access to the token.
+@payable
 export function transfer_from(owner_id: string, new_owner_id: string, token_id: TokenId): void {
   const predecessor = context.predecessor
 
@@ -65,6 +67,7 @@ export function transfer_from(owner_id: string, new_owner_id: string, token_id: 
   const escrow = escrowAccess.get(owner)
   assert([owner, escrow].includes(predecessor), ERROR_CALLER_ID_DOES_NOT_MATCH_EXPECTATION)
 
+  assert(context.attachedDeposit == u128.from(100), "Method requires deposit " + context.attachedDeposit.toString());
   // assign new owner to token
   tokenToOwner.set(token_id, new_owner_id)
 }
