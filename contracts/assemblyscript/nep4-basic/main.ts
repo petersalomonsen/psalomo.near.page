@@ -1,4 +1,4 @@
-import { PersistentMap, storage, context } from 'near-sdk-as'
+import { PersistentMap, storage, context, ContractPromiseBatch } from 'near-sdk-as'
 import { u128 } from "near-sdk-core";
 
 /**************************/
@@ -7,7 +7,7 @@ import { u128 } from "near-sdk-core";
 
 type AccountId = string
 type TokenId = u64
-type Content = u8[];
+type Content = string
 
 // Note that MAX_SUPPLY is implemented here as a simple constant
 // It is exported only to facilitate unit testing
@@ -28,6 +28,8 @@ const TOTAL_SUPPLY = 'c'
 
 // content behind the token
 const tokenToContent = new PersistentMap<TokenId, Content>('d')
+
+const tokenForSale = new PersistentMap<TokenId, u128>('e');
 
 /******************/
 /* ERROR MESSAGES */
@@ -57,7 +59,6 @@ export function revoke_access(escrow_account_id: string): void {
 // Transfer the given `token_id` to the given `new_owner_id`. Account `new_owner_id` becomes the new owner.
 // Requirements:
 // * The caller of the function (`predecessor`) should have access to the token.
-@payable
 export function transfer_from(owner_id: string, new_owner_id: string, token_id: TokenId): void {
   const predecessor = context.predecessor
 
@@ -67,7 +68,6 @@ export function transfer_from(owner_id: string, new_owner_id: string, token_id: 
   const escrow = escrowAccess.get(owner)
   assert([owner, escrow].includes(predecessor), ERROR_CALLER_ID_DOES_NOT_MATCH_EXPECTATION)
 
-  assert(context.attachedDeposit == u128.from(100), "Method requires deposit " + context.attachedDeposit.toString());
   // assign new owner to token
   tokenToOwner.set(token_id, new_owner_id)
 }
@@ -150,5 +150,25 @@ export function get_token_content(token_id: TokenId): Content {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
   assert(owner == predecessor, ERROR_TOKEN_NOT_OWNED_BY_CALLER)
-  return tokenToContent.getSome(token_id);
+  return tokenToContent.getSome(token_id)
+}
+
+export function sell_token(token_id: TokenId, price: u128): void {
+  const predecessor = context.predecessor
+  assert(predecessor == tokenToOwner.get(token_id), ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  tokenForSale.set(token_id, price)
+}
+
+@payable()
+export function buy_token(token_id: TokenId): void {
+  const predecessor = context.predecessor
+  assert(tokenForSale.contains(token_id), "Token is not for sale")
+
+  const askingPrice = tokenForSale.get(token_id)!;
+  assert(context.attachedDeposit == askingPrice, "Method requires deposit " + askingPrice.toString())
+  const owner = tokenToOwner.get(token_id)!
+
+  ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)
+  tokenToOwner.set(token_id, predecessor)
+  tokenForSale.delete(token_id)
 }

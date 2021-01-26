@@ -1,5 +1,5 @@
 import { VMContext } from 'near-sdk-as'
-import { u128 } from "near-sdk-core";
+import { Context, u128 } from "near-sdk-core";
 
 // explicitly import functions required by spec
 import {
@@ -19,7 +19,7 @@ const alice = 'alice'
 const bob = 'bob'
 const carol = 'carol'
 
-const content = [0x4, 0x5] as u8[];
+const content = 'testcontent';
 
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
@@ -71,12 +71,13 @@ describe('transfer_from', () => {
 
     // Alice transfers her token to Bob
     VMContext.setPredecessor_account_id(alice)
-    VMContext.setAttached_deposit(u128.from(100))
     transfer_from(alice, bob, aliceToken)
 
     // it works!
     expect(get_token_owner(aliceToken)).toBe(bob)
     expect(get_token_owner(aliceToken)).not.toBe(alice)
+
+    VMContext.setPredecessor_account_id(bob)
   })
 
   it('allows escrow to transfer given `token_id` to given `new_owner_id` if `owner_id` matches', () => {
@@ -91,7 +92,6 @@ describe('transfer_from', () => {
 
     // Bob transfers to himself
     VMContext.setPredecessor_account_id(bob)
-    VMContext.setAttached_deposit(u128.from(100))
     transfer_from(alice, bob, aliceToken)
 
     // it works!
@@ -248,4 +248,20 @@ describe('nonSpec interface', () => {
       nonSpec.get_token_content(tokenId)
     }).toThrow(nonSpec.ERROR_TOKEN_NOT_OWNED_BY_CALLER)
   })
+  it('should buy token', () => {
+    const tokenId = nonSpec.mint_to(carol, content)
+    const price = u128.from(200);
+    VMContext.setPredecessor_account_id(carol)
+
+    nonSpec.sell_token(tokenId, price)
+
+    VMContext.setPredecessor_account_id(bob)
+    VMContext.setAttached_deposit(price)
+
+    expect(get_token_owner(tokenId)).toStrictEqual(carol)
+    nonSpec.buy_token(tokenId)
+
+    VMContext.setPredecessor_account_id(carol)
+    expect(get_token_owner(tokenId)).toStrictEqual(bob)
+  });
 })
