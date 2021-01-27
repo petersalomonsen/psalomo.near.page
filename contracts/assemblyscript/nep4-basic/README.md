@@ -22,3 +22,11 @@ Notable additions that go beyond the specification of NEP#4
 ===========================================================
 
 `mint_to`: the spec gives no guidance or requirements on how tokens are minted/created/assigned. If this implementation of `mint_to` is close to matching your needs, feel free to ship your NFT with only minor modifications (such as caller verification). If you'd rather go with a strategy such as minting the whole supply of tokens upon deploy of the contract, or something else entirely, you may want to drastically change this behavior.
+
+WIP: selling and buying
+=======================
+near call sellnft.testnet mint_to --accountId psalomo.testnet '{"owner_id": "psalomo.testnet", "content": "hellotralala"}' 
+
+near call sellnft.testnet sell_token --accountId psalomo.testnet '{"token_id": "2", "price": "10000000000000000000000000"}'        
+
+near call sellnft.testnet buy_token --accountId apsolomo.testnet --amount "10"  --network_id testnet '{"token_id": "2"}'    
