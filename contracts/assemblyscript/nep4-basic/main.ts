@@ -159,7 +159,7 @@ export function sell_token(token_id: TokenId, price: u128): void {
   tokenForSale.set(token_id, price.toString())
 }
 
-@payable()
+@payable
 export function buy_token(token_id: TokenId): ContractPromiseBatch {
   const predecessor = context.predecessor
   assert(tokenForSale.contains(token_id), "Token is not for sale")
