@@ -121,7 +121,10 @@ export function get_token_owner(token_id: TokenId): string {
 
 // Note that ANYONE can call this function! You probably would not want to
 // implement a real NFT like this!
+@payable
 export function mint_to(owner_id: AccountId, content: Content): u64 {
+  const mintprice: u128 = u128.pow(u128.from(10), 24); // 1 N
+  assert(context.attachedDeposit == mintprice, "Method requires deposit of 1 N");
   // Fetch the next tokenId, using a simple indexing strategy that matches IDs
   // to current supply, defaulting the first token to ID=1
   //

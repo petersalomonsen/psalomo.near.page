@@ -21,9 +21,12 @@ const carol = 'carol'
 
 const content = 'testcontent';
 
+const mintprice = u128.fromString('1000000000000000000000000');
+
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
 
     // Alice calls `grant_access` to make Bob her escrow
@@ -40,7 +43,7 @@ describe('revoke_access', () => {
   it('revokes access to the given `accountId` for the given `tokenId`', () => {
     // Prevent error `InconsistentStateError(IntegerOverflow)` thrown by near-sdk-rs
     VMContext.setStorage_usage(100)
-
+    VMContext.setAttached_deposit(mintprice);
     // Alice has a token
     const aliceToken = nonSpec.mint_to(alice, content)
 
@@ -65,6 +68,7 @@ describe('revoke_access', () => {
 describe('transfer_from', () => {
   it('allows owner to transfer given `token_id` to given `owner_id`', () => {
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -86,6 +90,7 @@ describe('transfer_from', () => {
     grant_access(bob)
 
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -106,6 +111,7 @@ describe('transfer_from', () => {
       grant_access(bob)
 
       // Alice has a token
+      VMContext.setAttached_deposit(mintprice);
       const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -120,6 +126,7 @@ describe('transfer_from', () => {
   it('prevents anyone else from transferring the token', () => {
     expect(() => {
       // Alice has a token
+      VMContext.setAttached_deposit(mintprice);
       const aliceToken = nonSpec.mint_to(alice, content)
 
       // Bob tries to transfer it to himself
@@ -133,6 +140,7 @@ describe('transfer_from', () => {
 describe('transfer', () => {
   it('allows owner to transfer given `token_id` to given `owner_id`', () => {
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
     expect(get_token_owner(aliceToken)).toBe(alice)
     expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -153,6 +161,7 @@ describe('transfer', () => {
       grant_access(bob)
 
       // Alice has a token
+      VMContext.setAttached_deposit(mintprice);
       const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -169,6 +178,7 @@ describe('transfer', () => {
       VMContext.setPredecessor_account_id(alice)
 
       // Alice has a token
+      VMContext.setAttached_deposit(mintprice);
       const aliceToken = nonSpec.mint_to(alice, content)
       expect(get_token_owner(aliceToken)).toBe(alice)
       expect(get_token_owner(aliceToken)).not.toBe(bob)
@@ -184,6 +194,7 @@ describe('transfer', () => {
 describe('check_access', () => {
   it('returns true if caller of the function has access to the token', () => {
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
 
     // Alice grants access to Bob
@@ -197,6 +208,7 @@ describe('check_access', () => {
 
   it('returns false if caller of function does not have access', () => {
     // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
 
     // Bob checks if he has access
@@ -208,6 +220,7 @@ describe('check_access', () => {
 describe('get_token_owner', () => {
   it('returns accountId of owner of given `tokenId`', () => {
     // Alice and Bob both have tokens
+    VMContext.setAttached_deposit(mintprice);
     const aliceToken = nonSpec.mint_to(alice, content)
     const bobToken = nonSpec.mint_to(bob, content)
 
@@ -223,6 +236,7 @@ describe('get_token_owner', () => {
 
 describe('nonSpec interface', () => {
   it('should throw if we attempt to mint more than the MAX_SUPPLY', () => {
+    VMContext.setAttached_deposit(mintprice);
     // we can mint up to MAX_SUPPLY tokens
     expect(() => {
       let limit = nonSpec.MAX_SUPPLY
@@ -237,18 +251,21 @@ describe('nonSpec interface', () => {
     }).toThrow(nonSpec.ERROR_MAXIMUM_TOKEN_LIMIT_REACHED)
   })
   it('should get content', () => {
+    VMContext.setAttached_deposit(mintprice);
     const tokenId = nonSpec.mint_to(alice, content)
     VMContext.setPredecessor_account_id(alice)
     expect(nonSpec.get_token_content(tokenId)).toStrictEqual(content);
   })
   it('should not be allowed to get content', () => {
     expect(() => {
+      VMContext.setAttached_deposit(mintprice);
       const tokenId = nonSpec.mint_to(alice, content)
       VMContext.setPredecessor_account_id(bob)
       nonSpec.get_token_content(tokenId)
     }).toThrow(nonSpec.ERROR_TOKEN_NOT_OWNED_BY_CALLER)
   })
   it('should buy token', () => {
+    VMContext.setAttached_deposit(mintprice);
     const tokenId = nonSpec.mint_to(carol, content)
     const price = u128.from(200);
     VMContext.setPredecessor_account_id(carol)
