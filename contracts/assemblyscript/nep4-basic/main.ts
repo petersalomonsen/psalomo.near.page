@@ -41,6 +41,7 @@ export const ERROR_CALLER_ID_DOES_NOT_MATCH_EXPECTATION = 'Caller ID does not ma
 export const ERROR_MAXIMUM_TOKEN_LIMIT_REACHED = 'Maximum token limit reached'
 export const ERROR_OWNER_ID_DOES_NOT_MATCH_EXPECTATION = 'Owner id does not match real token owner id'
 export const ERROR_TOKEN_NOT_OWNED_BY_CALLER = 'Token is not owned by the caller. Please use transfer_from for this scenario'
+export const ERROR_TOKEN_NOT_FOR_SALE = 'Token is not for sale';
 
 /******************/
 /* CHANGE METHODS */
@@ -162,10 +163,15 @@ export function sell_token(token_id: TokenId, price: u128): void {
   tokenForSale.set(token_id, price.toString())
 }
 
+export function view_price(token_id: TokenId): u128 {
+  assert(tokenForSale.contains(token_id), ERROR_TOKEN_NOT_FOR_SALE)
+  return u128.from(tokenForSale.getSome(token_id))
+}
+
 @payable
 export function buy_token(token_id: TokenId): ContractPromiseBatch {
   const predecessor = context.predecessor
-  assert(tokenForSale.contains(token_id), "Token is not for sale")
+  assert(tokenForSale.contains(token_id), ERROR_TOKEN_NOT_FOR_SALE)
 
   const askingPrice = u128.from(tokenForSale.get(token_id)!);
   assert(context.attachedDeposit == askingPrice, "Method requires deposit " + askingPrice.toString())

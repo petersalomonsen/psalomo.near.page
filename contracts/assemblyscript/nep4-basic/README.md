@@ -31,6 +31,10 @@ near call sellnft.testnet sell_token --accountId psalomo.testnet '{"token_id": "
 
 near call sellnft.testnet buy_token --accountId apsolomo.testnet --amount "10"  --network_id testnet '{"token_id": "2"}'    
 
+## Deploy
+
+`near --accountId psalomo.near --networkId mainnet --walletUrl https://wallet.near.org --nodeUrl https://rpc.mainnet.near.org deploy --wasmFile build/release/main.wasm`
+
 ## The first mint of WebAssembly music on the NEAR mainnet
 
 https://explorer.near.org/transactions/BP4upKRtrJSYZa45Hp6voVny3GdUsCB4moGx7YJZ9AU7

@@ -264,13 +264,23 @@ describe('nonSpec interface', () => {
       nonSpec.get_token_content(tokenId)
     }).toThrow(nonSpec.ERROR_TOKEN_NOT_OWNED_BY_CALLER)
   })
-  it('should buy token', () => {
+  it('should fail to view price for token not for sale', () => {
+    expect(() => {
+      VMContext.setAttached_deposit(mintprice);
+      const tokenId = nonSpec.mint_to(alice, content)
+      nonSpec.view_price(tokenId);
+    }).toThrow(nonSpec.ERROR_TOKEN_NOT_FOR_SALE);
+  })
+  it('should sell, view price and buy token', () => {
     VMContext.setAttached_deposit(mintprice);
     const tokenId = nonSpec.mint_to(carol, content)
     const price = u128.from(200);
     VMContext.setPredecessor_account_id(carol)
 
     nonSpec.sell_token(tokenId, price)
+
+    const viewedPrice: u128 = nonSpec.view_price(tokenId);
+    expect(viewedPrice).toStrictEqual(price);
 
     VMContext.setPredecessor_account_id(bob)
     VMContext.setAttached_deposit(price)
