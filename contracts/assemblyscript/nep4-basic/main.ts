@@ -1,5 +1,5 @@
-import { PersistentMap, storage, context, ContractPromiseBatch } from 'near-sdk-as'
-import { u128 } from 'near-sdk-core';
+import { PersistentMap, storage, context, ContractPromiseBatch, base64 } from 'near-sdk-as'
+import { Storage, u128 } from 'near-sdk-core';
 
 /**************************/
 /* DATA TYPES AND STORAGE */
@@ -7,7 +7,7 @@ import { u128 } from 'near-sdk-core';
 
 type AccountId = string
 type TokenId = u64
-type Content = string
+type Content = Uint8Array
 
 // Note that MAX_SUPPLY is implemented here as a simple constant
 // It is exported only to facilitate unit testing
@@ -26,8 +26,8 @@ const escrowAccess = new PersistentMap<AccountId, AccountId>('b')
 // This is a key in storage used to track the current minted supply
 const TOTAL_SUPPLY = 'c'
 
-// content behind the token
-const tokenToContent = new PersistentMap<TokenId, Content>('d')
+@deprecated("content is stored as Uint8Array")
+const tokenToContent = new PersistentMap<TokenId, string>('d')
 
 const tokenForSale = new PersistentMap<TokenId, string>('e');
 
@@ -122,10 +122,12 @@ export function get_token_owner(token_id: TokenId): string {
 
 // Note that ANYONE can call this function! You probably would not want to
 // implement a real NFT like this!
+
+@deprecated
 @payable
-export function mint_to(owner_id: AccountId, content: Content): u64 {
-  const mintprice: u128 = u128.pow(u128.from(10), 24); // 1 N
-  assert(context.attachedDeposit == mintprice, "Method requires deposit of 1 N");
+export function mint_to(owner_id: AccountId, content: string): u64 {
+  const mintprice: u128 = u128.pow(u128.from(10), 24) * u128.from(content.length); // 1 N per character
+  assert(context.attachedDeposit == mintprice, "Method requires deposit of " + mintprice.toString());
   // Fetch the next tokenId, using a simple indexing strategy that matches IDs
   // to current supply, defaulting the first token to ID=1
   //
@@ -149,12 +151,59 @@ export function mint_to(owner_id: AccountId, content: Content): u64 {
   return tokenId
 }
 
+@payable
+export function mint_to_base64(owner_id: AccountId, contentbase64: string): u64 {
+  const content = base64.decode(contentbase64);
+  const mintprice: u128 = u128.pow(u128.from(10), 21) * u128.from(contentbase64.length); // 0.001 N per character
+  assert(context.attachedDeposit == mintprice, "Method requires deposit of " + mintprice.toString());
+  // Fetch the next tokenId, using a simple indexing strategy that matches IDs
+  // to current supply, defaulting the first token to ID=1
+  //
+  // * If your implementation allows deleting tokens, this strategy will not work!
+  // * To verify uniqueness, you could make IDs hashes of the data that makes tokens
+  //   special; see https://twitter.com/DennisonBertram/status/1264198473936764935
+  const tokenId = storage.getPrimitive<u64>(TOTAL_SUPPLY, 1)
+
+  // enforce token limits – not part of the spec but important!
+  assert(tokenId <= MAX_SUPPLY, ERROR_MAXIMUM_TOKEN_LIMIT_REACHED)
+
+  // assign ownership
+  tokenToOwner.set(tokenId, owner_id)
+  Storage.setBytes('t' + tokenId.toString(), content)
+
+  // increment and store the next tokenId
+  storage.set<u64>(TOTAL_SUPPLY, tokenId + 1)
+
+  // return the tokenId – while typical change methods cannot return data, this
+  // is handy for unit tests
+  return tokenId
+}
+
+/*export function wipe_tokens(): void {
+  const maxId: i32 = (storage.getPrimitive<u64>(TOTAL_SUPPLY, 1) + 1) as i32;
+  for (var n = 0; n < maxId; n++) {
+    tokenToOwner.delete(n);
+    tokenToContent.delete(n);
+    Storage.delete('t' + n.toString())
+  }
+  storage.set<u64>(TOTAL_SUPPLY, 1);
+}*/
+
 // Get content behind token
-export function get_token_content(token_id: TokenId): Content {
+@deprecated
+export function get_token_content(token_id: TokenId): string {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
   assert(owner == predecessor, ERROR_TOKEN_NOT_OWNED_BY_CALLER)
   return tokenToContent.getSome(token_id)
+}
+
+export function get_token_content_base64(token_id: TokenId): Content {
+  const predecessor = context.predecessor
+  const owner = tokenToOwner.getSome(token_id)
+  assert(owner == predecessor, ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  const contentbytes = Storage.getBytes('t' + token_id.toString())!
+  return contentbytes
 }
 
 export function sell_token(token_id: TokenId, price: u128): void {
