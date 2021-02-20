@@ -1,5 +1,5 @@
 // configure minimal network settings and key storage
-const nearconfig = {
+const nearconfig_main = {
     nodeUrl: 'https://rpc.mainnet.near.org',
     walletUrl: 'https://wallet.near.org',
     helperUrl: 'https://helper.near.org',
@@ -10,7 +10,20 @@ const nearconfig = {
     }
 };
 
-const token_id = '1';
+const nearconfig_test = {
+    nodeUrl: 'https://rpc.testnet.near.org',
+    walletUrl: 'https://wallet.testnet.near.org',
+    helperUrl: 'https://helper.testnet.near.org',
+    networkId: 'testnet',
+    contractName: 'sellnft.testnet',
+    deps: {
+        keyStore: null
+    }
+};
+
+const nearconfig = nearconfig_test;
+
+const token_id = '2';
 
 export let currentTokenPrice = null;
 
@@ -109,6 +122,12 @@ export async function initNear() {
     }
 }
 
+window.mint = async () => {
+    console.log(await walletConnection.account().functionCall(nearconfig.contractName,
+        'mint_to', { owner_id: 'psalomo.testnet', contentbase64: "AAECAw==" }, undefined,
+        new BN(10, 10).pow(new BN(24, 10)).toString()));
+};
+
 (async () => {
     await initNear();
     if (!walletConnection.getAccountId()) {
@@ -130,4 +149,5 @@ export async function initNear() {
         document.getElementById('sellarea').style.display = 'block';
         document.getElementById('downloadcontentarea').style.display = 'block';
     }
+
 })();
