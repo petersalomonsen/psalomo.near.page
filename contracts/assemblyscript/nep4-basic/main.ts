@@ -30,6 +30,7 @@ const tokenToContent = new PersistentMap<TokenId, string>('d')
 
 const tokenForSale = new PersistentMap<TokenId, string>('e');
 const tokenListenPrice = new PersistentMap<TokenId, string>('f');
+const listeners = new PersistentMap<AccountId, Set<TokenId>>('g');
 
 /******************/
 /* ERROR MESSAGES */
@@ -200,7 +201,7 @@ export function get_token_content(token_id: TokenId): string {
 }
 
 @payable
-export function get_token_content_base64(token_id: TokenId): Uint8Array {
+export function request_listening(token_id: TokenId): void {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
   if (owner != predecessor) {
@@ -208,6 +209,25 @@ export function get_token_content_base64(token_id: TokenId): Uint8Array {
     const listenPrice = u128.from(tokenListenPrice.get(token_id)!);
     assert(context.attachedDeposit == listenPrice, "Method requires deposit " + listenPrice.toString())
     
+    let listenerSet = new Set<TokenId>();
+
+    if (listeners.contains(predecessor)) {
+      listenerSet = listeners.get(predecessor)!;
+    }
+
+    listenerSet.add(token_id);
+    listeners.set(predecessor, listenerSet)
+  }
+}
+
+export function get_token_content_base64(token_id: TokenId): Uint8Array {
+  const predecessor = context.predecessor
+  const owner = tokenToOwner.getSome(token_id)
+  if (owner != predecessor) {
+    const listenerSet = listeners.get(predecessor)!
+    assert(listenerSet.has(token_id), ERROR_LISTENING_NOT_AVAILABLE)
+    listenerSet.delete(token_id)  
+    listeners.set(predecessor,listenerSet)
   }
   const contentbytes = Storage.getBytes('t' + token_id.toString())!
   return contentbytes

@@ -23,6 +23,8 @@ const content = 'AAECAw==';
 
 const mintprice = u128.fromString('8000000000000000000000');
 
+let currentTokenId: u64;
+
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
     // Alice has a token
@@ -326,6 +328,22 @@ describe('nonSpec interface', () => {
     nonSpec.set_listening_price(tokenId, listenprice);
     VMContext.setPredecessor_account_id(bob)
     VMContext.setAttached_deposit(listenprice)
+    nonSpec.request_listening(tokenId)
     expect(base64.encode(nonSpec.get_token_content_base64(tokenId))).toStrictEqual(content)
+  })
+  it('listeners should not be allowed to get content twice', () => {
+    VMContext.setAttached_deposit(mintprice);
+    VMContext.setPredecessor_account_id(alice)
+    currentTokenId = nonSpec.mint_to_base64(alice, content)
+    const listenprice = u128.fromString('1000000000000000000000')
+    nonSpec.set_listening_price(currentTokenId, listenprice);
+    VMContext.setPredecessor_account_id(bob)
+    VMContext.setAttached_deposit(listenprice)
+    nonSpec.request_listening(currentTokenId)
+    expect(base64.encode(nonSpec.get_token_content_base64(currentTokenId))).toStrictEqual(content)
+    expect(() => {
+      VMContext.setPredecessor_account_id(bob)
+      nonSpec.get_token_content_base64(currentTokenId)
+    }).toThrow()
   })
 })
