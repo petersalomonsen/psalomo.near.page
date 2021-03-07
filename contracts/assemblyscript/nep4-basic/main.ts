@@ -42,8 +42,9 @@ export const ERROR_CALLER_ID_DOES_NOT_MATCH_EXPECTATION = 'Caller ID does not ma
 export const ERROR_MAXIMUM_TOKEN_LIMIT_REACHED = 'Maximum token limit reached'
 export const ERROR_OWNER_ID_DOES_NOT_MATCH_EXPECTATION = 'Owner id does not match real token owner id'
 export const ERROR_TOKEN_NOT_OWNED_BY_CALLER = 'Token is not owned by the caller. Please use transfer_from for this scenario'
-export const ERROR_TOKEN_NOT_FOR_SALE = 'Token is not for sale';
-export const ERROR_LISTENING_NOT_AVAILABLE = 'Listening is not available';
+export const ERROR_TOKEN_NOT_FOR_SALE = 'Token is not for sale'
+export const ERROR_LISTENING_NOT_AVAILABLE = 'Listening is not available'
+export const ERROR_OWNERS_NOT_REQUIRED_TO_REQUEST_LISTENING = 'Owners are not required to request listening'
 
 /******************/
 /* CHANGE METHODS */
@@ -201,23 +202,23 @@ export function get_token_content(token_id: TokenId): string {
 }
 
 @payable
-export function request_listening(token_id: TokenId): void {
+export function request_listening(token_id: TokenId): ContractPromiseBatch {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
-  if (owner != predecessor) {
-    assert(tokenListenPrice.contains(token_id), ERROR_LISTENING_NOT_AVAILABLE);
-    const listenPrice = u128.from(tokenListenPrice.get(token_id)!);
-    assert(context.attachedDeposit == listenPrice, "Method requires deposit " + listenPrice.toString())
-    
-    let listenerSet = new Set<TokenId>();
+  assert(owner != predecessor, ERROR_OWNERS_NOT_REQUIRED_TO_REQUEST_LISTENING)
+  assert(tokenListenPrice.contains(token_id), ERROR_LISTENING_NOT_AVAILABLE)
+  const listenPrice = u128.from(tokenListenPrice.get(token_id)!);
+  assert(context.attachedDeposit == listenPrice, "Method requires deposit " + listenPrice.toString())
+  
+  let listenerSet = new Set<TokenId>()
 
-    if (listeners.contains(predecessor)) {
-      listenerSet = listeners.get(predecessor)!;
-    }
-
-    listenerSet.add(token_id);
-    listeners.set(predecessor, listenerSet)
+  if (listeners.contains(predecessor)) {
+    listenerSet = listeners.get(predecessor)!
   }
+
+  listenerSet.add(token_id)
+  listeners.set(predecessor, listenerSet)
+  return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)  
 }
 
 export function get_token_content_base64(token_id: TokenId): Uint8Array {

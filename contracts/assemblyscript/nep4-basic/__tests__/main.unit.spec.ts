@@ -346,4 +346,22 @@ describe('nonSpec interface', () => {
       nonSpec.get_token_content_base64(currentTokenId)
     }).toThrow()
   })
+  it('token owners should receive listen fee', () => {
+    VMContext.setAttached_deposit(mintprice)
+    VMContext.setPredecessor_account_id(alice)
+    currentTokenId = nonSpec.mint_to_base64(alice, content)
+    
+    const listenprice = u128.fromString('1000000000000000000000')
+    nonSpec.set_listening_price(currentTokenId, listenprice);
+  
+    VMContext.setAccount_balance(u128.fromString('0'))
+
+    VMContext.setPredecessor_account_id(bob)
+    VMContext.setAttached_deposit(listenprice)
+    nonSpec.request_listening(currentTokenId)
+  
+    expect(Context.accountBalance).toBe(u128.fromString('0'))
+    VMContext.setPredecessor_account_id(alice)
+    expect(Context.accountBalance).toBe(listenprice)
+  })
 })
