@@ -30,7 +30,6 @@ const tokenToContent = new PersistentMap<TokenId, string>('d')
 
 const tokenForSale = new PersistentMap<TokenId, string>('e');
 const tokenListenPrice = new PersistentMap<TokenId, string>('f');
-const listeners = new PersistentMap<AccountId, Set<TokenId>>('g');
 
 /******************/
 /* ERROR MESSAGES */
@@ -44,6 +43,7 @@ export const ERROR_OWNER_ID_DOES_NOT_MATCH_EXPECTATION = 'Owner id does not matc
 export const ERROR_TOKEN_NOT_OWNED_BY_CALLER = 'Token is not owned by the caller. Please use transfer_from for this scenario'
 export const ERROR_TOKEN_NOT_FOR_SALE = 'Token is not for sale'
 export const ERROR_LISTENING_NOT_AVAILABLE = 'Listening is not available'
+export const ERROR_LISTENING_REQUIRES_PAYMENT = 'Listening requires payment, call request_listening first'
 export const ERROR_OWNERS_NOT_REQUIRED_TO_REQUEST_LISTENING = 'Owners are not required to request listening'
 
 /******************/
@@ -210,26 +210,20 @@ export function request_listening(token_id: TokenId): ContractPromiseBatch {
   const listenPrice = u128.from(tokenListenPrice.get(token_id)!);
   assert(context.attachedDeposit == listenPrice, "Method requires deposit " + listenPrice.toString())
   
-  let listenerSet = new Set<TokenId>()
-
-  if (listeners.contains(predecessor)) {
-    listenerSet = listeners.get(predecessor)!
-  }
-
-  listenerSet.add(token_id)
-  listeners.set(predecessor, listenerSet)
+  const listeningKey = 'l:' + predecessor
+  Storage.set<u64>(listeningKey, token_id)
   return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)  
 }
 
 export function get_token_content_base64(token_id: TokenId): Uint8Array {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
+  
   if (owner != predecessor) {
-    const listenerSet = listeners.get(predecessor)!
-    assert(listenerSet.has(token_id), ERROR_LISTENING_NOT_AVAILABLE)
-    listenerSet.delete(token_id)  
-    listeners.set(predecessor,listenerSet)
-  }
+    const listeningKey = 'l:' + predecessor;
+    assert(Storage.getPrimitive<u64>(listeningKey, 0) === token_id, ERROR_LISTENING_REQUIRES_PAYMENT)
+    Storage.delete(listeningKey)
+  }  
   const contentbytes = Storage.getBytes('t' + token_id.toString())!
   return contentbytes
 }
