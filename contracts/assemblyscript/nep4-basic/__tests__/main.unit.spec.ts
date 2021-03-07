@@ -298,4 +298,34 @@ describe('nonSpec interface', () => {
     VMContext.setPredecessor_account_id(carol)
     expect(get_token_owner(tokenId)).toStrictEqual(bob)
   });
+  it('should not be allowed to get content if listening price is not set', () => {    
+    expect(() => {
+      VMContext.setAttached_deposit(mintprice);
+      VMContext.setPredecessor_account_id(alice)      
+      const tokenId = nonSpec.mint_to_base64(alice, content)
+      VMContext.setPredecessor_account_id(bob)
+      expect(base64.encode(nonSpec.get_token_content_base64(tokenId))).toStrictEqual(content)
+    }).toThrow(nonSpec.ERROR_LISTENING_NOT_AVAILABLE)
+  })
+  it('should not be allowed to get content if not paying for listening', () => {    
+    expect(() => {
+      VMContext.setAttached_deposit(mintprice);
+      VMContext.setPredecessor_account_id(alice)      
+      const tokenId = nonSpec.mint_to_base64(alice, content)
+      const listenprice = u128.fromString('1000000000000000000000')
+      nonSpec.set_listening_price(tokenId, listenprice)
+      VMContext.setPredecessor_account_id(bob)
+      expect(base64.encode(nonSpec.get_token_content_base64(tokenId))).toStrictEqual(content)
+    }).toThrow()
+  })
+  it('should be allowed to get content if listening price is set', () => {
+    VMContext.setAttached_deposit(mintprice);
+    VMContext.setPredecessor_account_id(alice)
+    const tokenId = nonSpec.mint_to_base64(alice, content)
+    const listenprice = u128.fromString('1000000000000000000000')
+    nonSpec.set_listening_price(tokenId, listenprice);
+    VMContext.setPredecessor_account_id(bob)
+    VMContext.setAttached_deposit(listenprice)
+    expect(base64.encode(nonSpec.get_token_content_base64(tokenId))).toStrictEqual(content)
+  })
 })

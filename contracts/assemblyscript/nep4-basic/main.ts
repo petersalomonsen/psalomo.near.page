@@ -7,7 +7,6 @@ import { Storage, u128 } from 'near-sdk-core';
 
 type AccountId = string
 type TokenId = u64
-type Content = Uint8Array
 
 // Note that MAX_SUPPLY is implemented here as a simple constant
 // It is exported only to facilitate unit testing
@@ -30,6 +29,7 @@ const TOTAL_SUPPLY = 'c'
 const tokenToContent = new PersistentMap<TokenId, string>('d')
 
 const tokenForSale = new PersistentMap<TokenId, string>('e');
+const tokenListenPrice = new PersistentMap<TokenId, string>('f');
 
 /******************/
 /* ERROR MESSAGES */
@@ -42,6 +42,7 @@ export const ERROR_MAXIMUM_TOKEN_LIMIT_REACHED = 'Maximum token limit reached'
 export const ERROR_OWNER_ID_DOES_NOT_MATCH_EXPECTATION = 'Owner id does not match real token owner id'
 export const ERROR_TOKEN_NOT_OWNED_BY_CALLER = 'Token is not owned by the caller. Please use transfer_from for this scenario'
 export const ERROR_TOKEN_NOT_FOR_SALE = 'Token is not for sale';
+export const ERROR_LISTENING_NOT_AVAILABLE = 'Listening is not available';
 
 /******************/
 /* CHANGE METHODS */
@@ -198,12 +199,28 @@ export function get_token_content(token_id: TokenId): string {
   return tokenToContent.getSome(token_id)
 }
 
-export function get_token_content_base64(token_id: TokenId): Content {
+@payable
+export function get_token_content_base64(token_id: TokenId): Uint8Array {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)
-  assert(owner == predecessor, ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  if (owner != predecessor) {
+    assert(tokenListenPrice.contains(token_id), ERROR_LISTENING_NOT_AVAILABLE);
+    const listenPrice = u128.from(tokenListenPrice.get(token_id)!);
+    assert(context.attachedDeposit == listenPrice, "Method requires deposit " + listenPrice.toString())
+    
+  }
   const contentbytes = Storage.getBytes('t' + token_id.toString())!
   return contentbytes
+}
+
+export function get_listening_price(token_id: TokenId): String {
+  return tokenListenPrice.get(token_id)!;
+}
+
+export function set_listening_price(token_id: TokenId, price: u128): void {
+  const predecessor = context.predecessor
+  assert(predecessor == tokenToOwner.get(token_id), ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  tokenListenPrice.set(token_id, price.toString())
 }
 
 export function sell_token(token_id: TokenId, price: u128): void {
