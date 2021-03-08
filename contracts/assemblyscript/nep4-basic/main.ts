@@ -157,7 +157,7 @@ export function mint_to(owner_id: AccountId, content: string): u64 {
 @payable
 export function mint_to_base64(owner_id: AccountId, contentbase64: string): u64 {
   const content = base64.decode(contentbase64);
-  const mintprice: u128 = u128.pow(u128.from(10), 21) * u128.from(contentbase64.length); // 0.001 N per character
+  const mintprice: u128 = u128.pow(u128.from(10), 20) * u128.from(contentbase64.length); // 0.0001 N per character
   assert(context.attachedDeposit == mintprice, "Method requires deposit of " + mintprice.toString());
   // Fetch the next tokenId, using a simple indexing strategy that matches IDs
   // to current supply, defaulting the first token to ID=1
@@ -212,7 +212,9 @@ export function request_listening(token_id: TokenId): ContractPromiseBatch {
   
   const listeningKey = 'l:' + predecessor
   Storage.set<u64>(listeningKey, token_id)
-  return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)  
+  // 99 % to owner
+  const amountToOwner = changetype<u128>(context.attachedDeposit * u128.fromI32(99) / u128.fromI32(100))
+  return ContractPromiseBatch.create(owner).transfer(amountToOwner)  
 }
 
 export function get_token_content_base64(token_id: TokenId): Uint8Array {

@@ -21,7 +21,7 @@ const carol = 'carol'
 
 const content = 'AAECAw==';
 
-const mintprice = u128.fromString('8000000000000000000000');
+const mintprice = u128.fromString('800000000000000000000');
 
 let currentTokenId: u64;
 
@@ -360,8 +360,8 @@ describe('nonSpec interface', () => {
     VMContext.setAttached_deposit(listenprice)
     nonSpec.request_listening(currentTokenId)
   
-    expect(Context.accountBalance).toBe(u128.fromString('0'))
+    expect(Context.accountBalance).toBe(u128.fromString('10000000000000000000'))
     VMContext.setPredecessor_account_id(alice)
-    expect(Context.accountBalance).toBe(listenprice)
+    expect(Context.accountBalance).toBe(u128.fromString('1000000000000000000000'))
   })
 })
