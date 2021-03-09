@@ -364,4 +364,20 @@ describe('nonSpec interface', () => {
     VMContext.setPredecessor_account_id(alice)
     expect(Context.accountBalance).toBe(u128.fromString('1000000000000000000000'))
   })
+  it('should be possible to mint 20kb', () => {
+    const largecontent = new Uint8Array(20 * 1024)
+    for (let n=0;n<largecontent.length;n++) {
+      largecontent[n] = n & 0xff
+    }
+    
+    const largecontentb64 = base64.encode(largecontent)
+    VMContext.setAttached_deposit(u128.fromString('100000000000000000000') * u128.fromI32(largecontentb64.length))
+
+    const aliceToken = nonSpec.mint_to_base64(alice, largecontentb64)
+    
+    VMContext.setPredecessor_account_id(alice)
+    const receieved = nonSpec.get_token_content_base64(aliceToken)
+    expect(receieved.length).toBe(largecontent.length)
+    expect(receieved).toStrictEqual(largecontent)
+  })
 })
