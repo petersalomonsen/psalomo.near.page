@@ -230,6 +230,10 @@ export function request_listening(token_id: TokenId): ContractPromiseBatch {
   return ContractPromiseBatch.create(owner).transfer(amountToOwner)  
 }
 
+export function view_token_content_base64(token_id: TokenId): String {
+  return base64.encode(Storage.getBytes('t' + token_id.toString())!)
+}
+
 export function get_token_content_base64(token_id: TokenId): Uint8Array {
   const predecessor = context.predecessor
   const owner = tokenToOwner.getSome(token_id)

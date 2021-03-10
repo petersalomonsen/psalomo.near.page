@@ -425,4 +425,11 @@ describe('nonSpec interface', () => {
     }).toThrow()
     
   })
+  it('should be possible to view token for free', () => {    
+    VMContext.setAttached_deposit(mintprice);
+    const tokenId = nonSpec.mint_to_base64(alice, content)
+    VMContext.setPredecessor_account_id(bob)
+    const result = nonSpec.view_token_content_base64(tokenId)
+    expect(result).toStrictEqual(content)
+  })
 })
