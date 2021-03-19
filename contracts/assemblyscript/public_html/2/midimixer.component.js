@@ -3,6 +3,12 @@ const midimixerhtml = `
   :host {
     display: inline-block;
   }
+  input[type=range] {
+    background-color: rgba(0,0,0,0.0);
+  }
+  input[type=range]::-moz-range-track {
+    background-color: rgba(0,0,0,0.8);
+  }
   .panslider {
     width: 50px;
   }
