@@ -1,4 +1,4 @@
-const nearconfig = {
+/*const nearconfig = {
     nodeUrl: 'https://rpc.mainnet.near.org',
     walletUrl: 'https://wallet.mainnet.near.org',
     helperUrl: 'https://helper.mainnet.near.org',
@@ -7,9 +7,20 @@ const nearconfig = {
     deps: {
         keyStore: null
     }
+};*/
+
+const nearconfig = {
+    nodeUrl: 'https://rpc.testnet.near.org',
+    walletUrl: 'https://wallet.testnet.near.org',
+    helperUrl: 'https://helper.testnet.near.org',
+    networkId: 'testnet',
+    contractName: 'sellnft.testnet',
+    deps: {
+        keyStore: null
+    }
 };
 
-const token_id = '3';
+const token_id = '11';
 
 export let currentTokenPrice = null;
 export let listeningPrice = null;
@@ -121,6 +132,12 @@ export async function upvoteMix(mix) {
     await walletConnection.account().functionCall(nearconfig.contractName, 'upvote_mix', { token_id: token_id, mix: mix }, 300000000000000);
     toggleSpinner(false);
     location.reload();
+}
+
+export async function buyMix(mix) {
+    toggleSpinner(true);
+    await walletConnection.account().functionCall(nearconfig.contractName, 'buy_mix', { original_token_id: token_id, mix: mix }, 300000000000000, nearApi.utils.format.parseNearAmount('10'));
+    toggleSpinner(false);
 }
 
 export async function getMixes() {

@@ -1,6 +1,6 @@
 import { } from './midimixer.component.js';
 import { initVisualizer, visualizeNoteOn, clearVisualization } from './visualizer.js';
-import { connectNear, publishMix as publishMixNear, getMixes, upvoteMix, getTokenContent, _base64ToArrayBuffer } from './nearclient.js';
+import { connectNear, publishMix as publishMixNear, getMixes, upvoteMix, getTokenContent, _base64ToArrayBuffer, buyMix } from './nearclient.js';
 
 let audioWorkletNode;
 const channels = ['piano','strings','drums','guitar','bass','flute'];
@@ -287,7 +287,7 @@ visualizeNoteOn(64,1);
         mixes.forEach((mix, n) => {
             const listitemcontainer = document.createElement('div');    
             listitemcontainer.style.display = 'grid';
-            listitemcontainer.style.gridTemplateColumns = 'auto auto';  
+            listitemcontainer.style.gridTemplateColumns = 'auto auto auto';  
             const elm = document.createElement('div');
             elm.classList.add('mixlistitem');
             if (n===0) {
@@ -318,7 +318,16 @@ visualizeNoteOn(64,1);
                 upvotebutton.classList.add('upvotebutton');
                 upvotebutton.onclick = () => upvoteMix(mix);
                 listitemcontainer.appendChild(upvotebutton);
+            } else {
+                listitemcontainer.appendChild(document.createElement('span'));
             }
+            const buybutton = document.createElement('button');
+            buybutton.classList.add('upvotebutton');
+            buybutton.innerHTML = '&#x1F6D2;';
+            buybutton.title = 'buy';            
+            buybutton.onclick = () => buyMix(mix);
+            listitemcontainer.appendChild(buybutton);
+            
             latest20element.appendChild(listitemcontainer);
         });
         toggleSpinner(false);
