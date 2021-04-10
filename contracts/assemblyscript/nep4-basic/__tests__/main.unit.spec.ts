@@ -501,4 +501,16 @@ describe('nonSpec interface', () => {
     expect(mixes[nonSpec.MAX_MIXES_PER_TOKEN - upVoteIndex - 2]).toBe(bob+';'+(upVoteIndex).toString()+';'+upVoteIndex.toString()+','+(upVoteIndex+1).toString()+'', 'after upvote, mix content before upvoted pos')
     expect(mixes[nonSpec.MAX_MIXES_PER_TOKEN - upVoteIndex - 1]).toBe(bob+';'+(upVoteIndex+1).toString()+';'+(upVoteIndex+1).toString()+','+(upVoteIndex+2).toString()+'', 'after upvote, mix content at upvoted pos')
   })
+  it('should be possible to buy a token mix', () => {
+    VMContext.setAttached_deposit(mintprice);
+    const tokenId = nonSpec.mint_to_base64(alice, content, true)
+    VMContext.setPredecessor_account_id(bob)
+    nonSpec.publish_token_mix(tokenId, [55,33,21])
+    const mixes = nonSpec.get_token_mixes(tokenId)
+    expect(mixes.length).toBe(1)
+    VMContext.setPredecessor_account_id(carol)
+    VMContext.setAttached_deposit(u128.fromString('10000000000000000000000000'))
+    nonSpec.buy_mix(tokenId, mixes[0])
+    VMContext.setCurrent_account_id(alice)
+  })
 })

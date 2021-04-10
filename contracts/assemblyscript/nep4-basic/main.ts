@@ -267,6 +267,12 @@ export function sell_token(token_id: TokenId, price: u128): void {
   tokenForSale.set(token_id, price.toString())
 }
 
+export function remove_token_from_sale(token_id: TokenId): void {
+  const predecessor = context.predecessor
+  assert(predecessor == tokenToOwner.get(token_id), ERROR_TOKEN_NOT_OWNED_BY_CALLER)
+  tokenForSale.delete(token_id)
+}
+
 export function view_price(token_id: TokenId): u128 {
   assert(tokenForSale.contains(token_id), ERROR_TOKEN_NOT_FOR_SALE)
   return u128.from(tokenForSale.getSome(token_id))
@@ -285,6 +291,45 @@ export function buy_token(token_id: TokenId): ContractPromiseBatch {
   tokenForSale.delete(token_id)
 
   return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)
+}
+
+
+
+@payable
+export function buy_mix(original_token_id: TokenId, mix: string): ContractPromiseBatch {
+  let mixes: Array<string> = tokenMixes.get(original_token_id)!
+  let matchingMixIndex = -1;
+
+  for (let n=0;n<mixes.length; n++) {
+    if (mixes[n] == mix) {
+      matchingMixIndex = n;
+      const tokenId = storage.getPrimitive<u64>(TOTAL_SUPPLY, 1)
+
+      const predecessor = context.predecessor
+      // assign ownership
+      tokenToOwner.set(tokenId, predecessor)
+      tokenToContent.set(tokenId, mix)
+
+      // increment and store the next tokenId
+      storage.set<u64>(TOTAL_SUPPLY, tokenId + 1)
+
+      // return the tokenId – while typical change methods cannot return data, this
+      // is handy for unit tests
+      const originalTokenOwner = tokenToOwner.get(original_token_id)!
+      const mixauthor = mix.split(';')[0]
+      
+      const askingPrice = u128.fromString('10000000000000000000000000')
+      assert(context.attachedDeposit == askingPrice, "Method requires deposit " + askingPrice.toString())
+      
+      // 40 % to owner, 40 % to mix author, 20% to contract
+      const amountToOwner = changetype<u128>(context.attachedDeposit * u128.fromI32(40) / u128.fromI32(100))
+      const amountToMixAuthor = amountToOwner
+
+      return ContractPromiseBatch.create(originalTokenOwner).transfer(amountToOwner)
+              .then(mixauthor).transfer(amountToMixAuthor)
+    }
+  }
+  throw('No mix found')
 }
 
 export function publish_token_mix(token_id: TokenId, mix: u8[]): void {
