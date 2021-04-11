@@ -297,12 +297,15 @@ export function buy_token(token_id: TokenId): ContractPromiseBatch {
 
 @payable
 export function buy_mix(original_token_id: TokenId, mix: string): ContractPromiseBatch {
+  assert(mix.split(';')[1].indexOf('nft:') !== 0, 'mix is already an nft')
+
   let mixes: Array<string> = tokenMixes.get(original_token_id)!
   let matchingMixIndex = -1;
 
   for (let n=0;n<mixes.length; n++) {
     if (mixes[n] == mix) {
       matchingMixIndex = n;
+      // create a new NFT
       const tokenId = storage.getPrimitive<u64>(TOTAL_SUPPLY, 1)
 
       const predecessor = context.predecessor
@@ -313,11 +316,12 @@ export function buy_mix(original_token_id: TokenId, mix: string): ContractPromis
       // increment and store the next tokenId
       storage.set<u64>(TOTAL_SUPPLY, tokenId + 1)
 
-      // return the tokenId – while typical change methods cannot return data, this
-      // is handy for unit tests
       const originalTokenOwner = tokenToOwner.get(original_token_id)!
       const mixauthor = mix.split(';')[0]
-      
+      mixes[n] = mixauthor + ';nft:' + tokenId.toString()
+
+      tokenMixes.set(original_token_id, mixes)
+
       const askingPrice = u128.fromString('10000000000000000000000000')
       assert(context.attachedDeposit == askingPrice, "Method requires deposit " + askingPrice.toString())
       
@@ -338,33 +342,28 @@ export function publish_token_mix(token_id: TokenId, mix: u8[]): void {
     
   let mixes: Array<string> = tokenMixes.get(token_id)!
 
-  mixes.unshift(context.predecessor+';'+context.blockTimestamp.toString()+';'+mix.toString());
+  const mixstring = context.predecessor+';'+context.blockTimestamp.toString()+';'+mix.toString();
 
-  if (mixes.length > MAX_MIXES_PER_TOKEN) {
-    mixes = mixes.slice(0, MAX_MIXES_PER_TOKEN)
+  if (mixes.length < MAX_MIXES_PER_TOKEN) {
+    mixes.push(mixstring)
+  } else {
+    let oldestAvailableMixIndex = -1
+    let oldestMixBlockTimestamp = context.blockTimestamp
+    for (let n=0;n<mixes.length;n++) {
+      const mixparts = mixes[n].split(';')
+      if (mixparts.length > 2) {
+        // is not yet an NFT
+        const mixBlockTimestamp: u64 = parseInt(mixparts[1]) as u64
+        if (mixBlockTimestamp < oldestMixBlockTimestamp) {
+          oldestMixBlockTimestamp = mixBlockTimestamp
+          oldestAvailableMixIndex = n
+        }
+      }
+    }
+    assert (oldestAvailableMixIndex > -1, 'No more remixes allowed')
+    mixes[oldestAvailableMixIndex] = mixstring
   }
   tokenMixes.set(token_id, mixes)
-}
-
-export function upvote_mix(token_id: TokenId, mix: string): void {
-  assert(tokenMixes.contains(token_id), ERROR_TOKEN_DOES_NOT_SUPPORT_MIXING)
-
-  let mixes: Array<string> = tokenMixes.get(token_id)!
-  let matchingMixIndex = -1;
-
-  for (let n=0;n<mixes.length; n++) {
-    if (mixes[n] == mix) {
-      matchingMixIndex = n;
-      break;
-    }
-  }
-  
-  if (matchingMixIndex > 0) {
-    const matchingMix = mixes[matchingMixIndex];
-    mixes[matchingMixIndex] = mixes[matchingMixIndex - 1]
-    mixes[matchingMixIndex - 1] = matchingMix
-    tokenMixes.set(token_id, mixes)
-  }
 }
 
 export function get_token_mixes(token_id: TokenId): string[] {

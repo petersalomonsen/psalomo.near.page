@@ -266,7 +266,8 @@ visualizeNoteOn(64,1);
 (async () => {
     toggleSpinner(true);
     await connectNear();
-    const mixes = (await getMixes());
+    const mixes = (await getMixes()).filter(m => m.split(';')[1].indexOf('nft:') === -1).sort((a,b) => parseInt(a.split(';')[1])-parseInt(b.split(';')[1]));
+    
     if (mixes.length > 0) {
         const patternElements = document.querySelectorAll('.patternelement');
         const latestmix = mixes[0].split(';');
@@ -310,17 +311,7 @@ visualizeNoteOn(64,1);
             const mixinfo = mix.split(';');
             elm.innerHTML = `${mixinfo[0]}<br />
                     <span class="mixlistdate">${new Date(parseInt(mixinfo[1])/1000000).toLocaleString()}</span>`;
-            listitemcontainer.appendChild(elm);
-            if (n>0) {
-                const upvotebutton = document.createElement('button');
-                upvotebutton.innerHTML = '&uarr;';
-                upvotebutton.title = 'upvote';
-                upvotebutton.classList.add('upvotebutton');
-                upvotebutton.onclick = () => upvoteMix(mix);
-                listitemcontainer.appendChild(upvotebutton);
-            } else {
-                listitemcontainer.appendChild(document.createElement('span'));
-            }
+            listitemcontainer.appendChild(elm);            
             const buybutton = document.createElement('button');
             buybutton.classList.add('upvotebutton');
             buybutton.innerHTML = '&#x1F6D2;';
