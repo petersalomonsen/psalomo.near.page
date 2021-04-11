@@ -57,16 +57,16 @@ function convertNearToYocto(near) {
     return new BN(10, 10).pow(new BN(21, 10)).mul(new BN(milliNear, 10)).toString();
 }
 
+export async function getMixTokenContent(id) {
+    const result = await walletConnection.account()
+            .viewFunction(nearconfig.contractName, 'view_token_content', { token_id: id });
+    return result;
+}
+
 export async function getTokenContent() {
-    /*if (!walletConnection.getAccountId()) {
-        alert('you need to log in to play the music');
-        toggleSpinner(false);
-        throw('not logged in');
-    }*/
     try {
         const result = await walletConnection.account()
             .viewFunction(nearconfig.contractName, 'view_token_content_base64', { token_id: token_id });
-        //return atob(result.status.SuccessValue);
         return result;
     } catch(e) {
         if (e.message.indexOf('requires payment') > -1) {
@@ -88,8 +88,8 @@ export async function viewListeningPrice() {
     return listeningPrice;
 }
 
-export async function viewTokenOwner() {
-    tokenOwner = await walletConnection.account().viewFunction(nearconfig.contractName, 'get_token_owner', { token_id: token_id });
+export async function viewTokenOwner(id = token_id) {
+    tokenOwner = await walletConnection.account().viewFunction(nearconfig.contractName, 'get_token_owner', { token_id: id });
     return tokenOwner;
 }
 

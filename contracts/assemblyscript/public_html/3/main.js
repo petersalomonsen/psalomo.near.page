@@ -1,6 +1,6 @@
 import { } from './midimixer.component.js';
 import { initVisualizer, visualizeNoteOn, clearVisualization } from './visualizer.js';
-import { connectNear, publishMix as publishMixNear, getMixes, upvoteMix, getTokenContent, _base64ToArrayBuffer, buyMix } from './nearclient.js';
+import { connectNear, publishMix as publishMixNear, getMixes, viewTokenOwner, getMixTokenContent, getTokenContent, _base64ToArrayBuffer, buyMix } from './nearclient.js';
 
 let audioWorkletNode;
 const channels = ['piano','strings','drums','guitar','bass','flute'];
@@ -266,11 +266,17 @@ visualizeNoteOn(64,1);
 (async () => {
     toggleSpinner(true);
     await connectNear();
-    const mixes = (await getMixes()).filter(m => m.split(';')[1].indexOf('nft:') === -1).sort((a,b) => parseInt(a.split(';')[1])-parseInt(b.split(';')[1]));
-    
-    if (mixes.length > 0) {
+    const allmixes = (await getMixes()).map(mix => mix.split(';'));
+    toggleSpinner(false);
+
+    const publicmixes = allmixes.filter(m => m[1].indexOf('nft:') === -1).sort((a,b) => parseInt(a[1])-parseInt(b[1]));
+    const ownedmixes = allmixes.filter(m => m[1].indexOf('nft:') === 0);
+
+    let currentMixElement;
+
+    if (publicmixes.length > 0) {
         const patternElements = document.querySelectorAll('.patternelement');
-        const latestmix = mixes[0].split(';');
+        const latestmix = publicmixes[0];
         document.getElementById('latestmixinfo').innerHTML = `
             <p>
             latest mix by <span class="highlightedtext">${latestmix[0]}</span> on ${new Date(parseInt(latestmix[1])/1000000).toLocaleString()}
@@ -284,8 +290,8 @@ visualizeNoteOn(64,1);
         };
         updateMixerState(latestmixdata.slice(songdata.length));
         const latest20element = document.getElementById('latest20mixes');
-        let currentMixElement;
-        mixes.forEach((mix, n) => {
+
+        publicmixes.forEach((mix, n) => {
             const listitemcontainer = document.createElement('div');    
             listitemcontainer.style.display = 'grid';
             listitemcontainer.style.gridTemplateColumns = 'auto auto auto';  
@@ -295,7 +301,7 @@ visualizeNoteOn(64,1);
                 currentMixElement = elm;
                 elm.classList.add('currentmix');
             }
-            const mixdata = mix.split(';')[2].split(',').map(v => parseInt(v));
+            const mixdata = mix[2].split(',').map(v => parseInt(v));
             elm.onclick = () => {                                
                 for (let n=0;n<songdata.length;n++) {
                     const v = mixdata[n];
@@ -308,19 +314,29 @@ visualizeNoteOn(64,1);
                 currentMixElement = elm;
                 elm.classList.add('currentmix');
             };
-            const mixinfo = mix.split(';');
-            elm.innerHTML = `${mixinfo[0]}<br />
-                    <span class="mixlistdate">${new Date(parseInt(mixinfo[1])/1000000).toLocaleString()}</span>`;
+            
+            elm.innerHTML = `${mix[0]}<br />
+                    <span class="mixlistdate">${new Date(parseInt(mix[1])/1000000).toLocaleString()}</span>`;
             listitemcontainer.appendChild(elm);            
             const buybutton = document.createElement('button');
             buybutton.classList.add('upvotebutton');
             buybutton.innerHTML = '&#x1F6D2;';
             buybutton.title = 'buy';            
-            buybutton.onclick = () => buyMix(mix);
+            buybutton.onclick = () => buyMix(mix.join(';'));
             listitemcontainer.appendChild(buybutton);
             
             latest20element.appendChild(listitemcontainer);
-        });
-        toggleSpinner(false);
+        });     
     }
+
+    if (walletConnection.getAccountId() && ownedmixes.length > 0) {
+        const mymixes = await Promise.all(ownedmixes.map(m => ({
+            token_id: m[1].substr('nft:'.length),
+            author: m[0]
+        })).filter(async (m) => (await viewTokenOwner(m.token_id) === walletConnection.getAccountId()))
+            .map(async m => Object.assign(m, {content: await getMixTokenContent(m.token_id)})));
+    
+        console.log(mymixes);
+    }
+    
 })();

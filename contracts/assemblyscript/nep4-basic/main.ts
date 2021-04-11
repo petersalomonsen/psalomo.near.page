@@ -218,6 +218,10 @@ export function get_token_content(token_id: TokenId): string {
   return tokenToContent.getSome(token_id)
 }
 
+export function view_token_content(token_id: TokenId): string {
+  return tokenToContent.getSome(token_id)
+}
+
 @payable
 export function request_listening(token_id: TokenId): ContractPromiseBatch {
   const predecessor = context.predecessor
