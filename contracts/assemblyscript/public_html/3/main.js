@@ -12,7 +12,7 @@ const partduration = 1000 * 60 * beatsperpart / bpm;
 const songduration = partduration * songlength;
 const channelpatternmap =  {"0":[0,1,6,13],"1":[0,2,7,17],"2":[0,5,9,12],"3":[0,4,8,15],"4":[0,3,11,14],"5":[0,10,16]};
 const patternentrycolors = ['#000','#f80','#08f','#f8f','#8f8','#ff8','#8ff','#88f','#f88'];
-
+const currentMixOwnerDiv = document.querySelector('#currentMixOwner');
 document.querySelector("#timeindicator").max = songduration;
 
 async function getWasmBytes() {
@@ -161,6 +161,7 @@ async function updateSong() {
 }
 
 async function clearGrid() {
+    currentMixOwnerDiv.innerHTML = '';
     const patternElements = document.querySelectorAll('.patternelement');
     for (let n=0;n<songdata.length;n++) {
         const v = 0;
@@ -227,11 +228,10 @@ for (let n=0;n<numcells;n++) {
         const ch = Math.floor(sdp / songlength);
         
         elm.classList.add('patternelement');
-        let patternIndex = songdata[sdp];
-        elm.style.backgroundColor = patternentrycolors[patternIndex];
+        elm.style.backgroundColor = patternentrycolors[0];
 
         elm.addEventListener('click', () => {
-            patternIndex++;
+            let patternIndex = songdata[sdp] + 1;
 
             patternIndex %= channelpatternmap[ch].length;
             songdata[sdp] = patternIndex;
@@ -245,6 +245,8 @@ for (let n=0;n<numcells;n++) {
                     starttime: (sdp % songlength) * partduration
                 });
             }
+
+            currentMixOwnerDiv.innerHTML = '';
         });
         songdatapos++;
     }
@@ -302,9 +304,11 @@ visualizeNoteOn(64,1);
             currentMixElement.classList.remove('currentmix');
             currentMixElement = elm;
             elm.classList.add('currentmix');
-            const currentMixOwnerDiv = document.querySelector('#currentMixOwner');
+
             if (mix.owner) {
-                currentMixOwnerDiv.innerHTML = `remix owned by: ${mix.owner}`;
+                currentMixOwnerDiv.innerHTML = `remix owned by 
+                        ${mix.owner===walletConnection.account().accountId ?
+                        `you <button onclick="exportWav()">Download</button>` : mix.owner}`;
                 currentMixOwnerDiv.style.display = 'block';
             } else {
                 currentMixOwnerDiv.style.display = 'none';
