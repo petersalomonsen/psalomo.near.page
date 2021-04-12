@@ -269,74 +269,90 @@ visualizeNoteOn(64,1);
     const allmixes = (await getMixes()).map(mix => mix.split(';'));
     toggleSpinner(false);
 
-    const publicmixes = allmixes.filter(m => m[1].indexOf('nft:') === -1).sort((a,b) => parseInt(a[1])-parseInt(b[1]));
+    const publicmixes = allmixes.filter(m => m[1].indexOf('nft:') === -1)
+                .sort((a,b) => parseInt(a[1])-parseInt(b[1]))
+                .map(parts => ({
+                    content: parts[2].split(',').map(v => parseInt(v)),
+                    timestamp: parts[1],
+                    author: parts[0],
+                    identitfier: parts.join(';')
+                }));
     const ownedmixes = allmixes.filter(m => m[1].indexOf('nft:') === 0);
 
     let currentMixElement;
 
-    if (publicmixes.length > 0) {
-        const patternElements = document.querySelectorAll('.patternelement');
+    const latest20element = document.getElementById('latest20mixes');
+    const patternElements = document.querySelectorAll('.patternelement');
+
+    const addMixToList = (mix) => {
+        const listitemcontainer = document.createElement('div');    
+        listitemcontainer.style.display = 'grid';
+        listitemcontainer.style.gridTemplateColumns = 'auto auto';  
+        const elm = document.createElement('div');
+        elm.classList.add('mixlistitem');
+        const mixdata = mix.content;
+        elm.onclick = () => {                                
+            for (let n=0;n<songdata.length;n++) {
+                const v = mixdata[n];
+                songdata[n] = v;        
+                patternElements[n].style.backgroundColor = patternentrycolors[v];
+            }
+            postPatternSchedule();
+            updateMixerState(mixdata.slice(songdata.length));
+            currentMixElement.classList.remove('currentmix');
+            currentMixElement = elm;
+            elm.classList.add('currentmix');
+            const currentMixOwnerDiv = document.querySelector('#currentMixOwner');
+            if (mix.owner) {
+                currentMixOwnerDiv.innerHTML = `remix owned by: ${mix.owner}`;
+                currentMixOwnerDiv.style.display = 'block';
+            } else {
+                currentMixOwnerDiv.style.display = 'none';
+            }
+        };
+        
+        elm.innerHTML = `${mix.author}<br />
+                <span class="mixlistdate">${new Date(parseInt(mix.timestamp)/1000000).toLocaleString()}</span>`;
+        listitemcontainer.appendChild(elm);
+
+        if (mix.owner) {
+            
+        } else {
+            const buybutton = document.createElement('button');
+            buybutton.classList.add('upvotebutton');
+            buybutton.innerHTML = 'buy';
+            buybutton.title = 'buy';            
+            buybutton.onclick = () => buyMix(mix.identitfier);
+            listitemcontainer.appendChild(buybutton);
+        }    
+        latest20element.appendChild(listitemcontainer);
+    }     
+
+    if (publicmixes.length > 0) {        
         const latestmix = publicmixes[0];
-        document.getElementById('latestmixinfo').innerHTML = `
-            <p>
-            latest mix by <span class="highlightedtext">${latestmix[0]}</span> on ${new Date(parseInt(latestmix[1])/1000000).toLocaleString()}
-            </p>
-        `;
-        const latestmixdata = latestmix[2].split(',').map(v => parseInt(v));
+        const latestmixdata = latestmix.content;
         for (let n=0;n<songdata.length;n++) {
             const v = latestmixdata[n];
             songdata[n] = v;        
             patternElements[n].style.backgroundColor = patternentrycolors[v];
         };
         updateMixerState(latestmixdata.slice(songdata.length));
-        const latest20element = document.getElementById('latest20mixes');
-
-        publicmixes.forEach((mix, n) => {
-            const listitemcontainer = document.createElement('div');    
-            listitemcontainer.style.display = 'grid';
-            listitemcontainer.style.gridTemplateColumns = 'auto auto auto';  
-            const elm = document.createElement('div');
-            elm.classList.add('mixlistitem');
-            if (n===0) {
-                currentMixElement = elm;
-                elm.classList.add('currentmix');
-            }
-            const mixdata = mix[2].split(',').map(v => parseInt(v));
-            elm.onclick = () => {                                
-                for (let n=0;n<songdata.length;n++) {
-                    const v = mixdata[n];
-                    songdata[n] = v;        
-                    patternElements[n].style.backgroundColor = patternentrycolors[v];
-                }
-                postPatternSchedule();
-                updateMixerState(mixdata.slice(songdata.length));
-                currentMixElement.classList.remove('currentmix');
-                currentMixElement = elm;
-                elm.classList.add('currentmix');
-            };
-            
-            elm.innerHTML = `${mix[0]}<br />
-                    <span class="mixlistdate">${new Date(parseInt(mix[1])/1000000).toLocaleString()}</span>`;
-            listitemcontainer.appendChild(elm);            
-            const buybutton = document.createElement('button');
-            buybutton.classList.add('upvotebutton');
-            buybutton.innerHTML = '&#x1F6D2;';
-            buybutton.title = 'buy';            
-            buybutton.onclick = () => buyMix(mix.join(';'));
-            listitemcontainer.appendChild(buybutton);
-            
-            latest20element.appendChild(listitemcontainer);
-        });     
+        publicmixes.forEach(m => addMixToList(m));
+        currentMixElement = document.querySelector('.mixlistitem');
     }
 
-    if (walletConnection.getAccountId() && ownedmixes.length > 0) {
-        const mymixes = await Promise.all(ownedmixes.map(m => ({
+    if (ownedmixes.length > 0) {
+        const mymixes = (await Promise.all(ownedmixes.map(m => ({
             token_id: m[1].substr('nft:'.length),
             author: m[0]
-        })).filter(async (m) => (await viewTokenOwner(m.token_id) === walletConnection.getAccountId()))
-            .map(async m => Object.assign(m, {content: await getMixTokenContent(m.token_id)})));
-    
-        console.log(mymixes);
+        })).map(async m => Object.assign(m, {
+            owner: await viewTokenOwner(m.token_id),
+            content: await getMixTokenContent(m.token_id)
+        })))).map(m => Object.assign(m, {
+            content: m.content.split(';')[2].split(',').map(v => parseInt(v)),
+            timestamp: m.content.split(';')[1],
+        }));
+        mymixes.forEach(m => addMixToList(m));
     }
     
 })();
