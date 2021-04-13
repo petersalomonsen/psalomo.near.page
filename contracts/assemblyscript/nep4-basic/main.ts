@@ -30,9 +30,10 @@ const TOTAL_SUPPLY = 'c'
 @deprecated("content is stored as Uint8Array")
 const tokenToContent = new PersistentMap<TokenId, string>('d')
 
-const tokenForSale = new PersistentMap<TokenId, string>('e');
-const tokenListenPrice = new PersistentMap<TokenId, string>('f');
-const tokenMixes = new PersistentMap<TokenId,Array<string>>('g');
+const tokenForSale = new PersistentMap<TokenId, string>('e')
+const tokenListenPrice = new PersistentMap<TokenId, string>('f')
+const tokenMixes = new PersistentMap<TokenId,Array<string>>('g')
+const remixTokens = new PersistentMap<TokenId, string>('d')
 
 /******************/
 /* ERROR MESSAGES */
@@ -218,8 +219,8 @@ export function get_token_content(token_id: TokenId): string {
   return tokenToContent.getSome(token_id)
 }
 
-export function view_token_content(token_id: TokenId): string {
-  return tokenToContent.getSome(token_id)
+export function view_remix_content(token_id: TokenId): string {
+  return remixTokens.getSome(token_id)
 }
 
 @payable
@@ -294,7 +295,26 @@ export function buy_token(token_id: TokenId): ContractPromiseBatch {
   tokenToOwner.set(token_id, predecessor)
   tokenForSale.delete(token_id)
 
-  return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit)
+  if (remixTokens.contains(token_id)) {
+    const remixcontentparts = remixTokens.get(token_id)!.split(';')
+    const original_token_id = parseInt(remixcontentparts[0]) as u64
+    const original_token_owner = tokenToOwner.get(original_token_id)!
+    const remix_author = remixcontentparts[1]
+    // 2% to original content owner
+    const amountToOriginalTokenOwner = changetype<u128>(context.attachedDeposit * u128.fromI32(2) / u128.fromI32(100))
+    // 2% to remix author
+    const amountToRemixAuthor = changetype<u128>(context.attachedDeposit * u128.fromI32(2) / u128.fromI32(100))
+    // 1% to contract
+    const amountToContract = changetype<u128>(context.attachedDeposit * u128.fromI32(1) / u128.fromI32(100))
+    const amountToRemixOwner = context.attachedDeposit - amountToContract - amountToRemixAuthor - amountToOriginalTokenOwner
+    return ContractPromiseBatch.create(owner).transfer(amountToRemixOwner)
+            .then(original_token_owner).transfer(amountToOriginalTokenOwner)
+            .then(remix_author).transfer(amountToRemixAuthor)
+  } else {
+    // 1% to contract
+    const amountToContract = changetype<u128>(context.attachedDeposit * u128.fromI32(1) / u128.fromI32(100))
+    return ContractPromiseBatch.create(owner).transfer(context.attachedDeposit - amountToContract)
+  }
 }
 
 
@@ -315,7 +335,7 @@ export function buy_mix(original_token_id: TokenId, mix: string): ContractPromis
       const predecessor = context.predecessor
       // assign ownership
       tokenToOwner.set(tokenId, predecessor)
-      tokenToContent.set(tokenId, mix)
+      remixTokens.set(tokenId, original_token_id.toString() + ';' +mix)
 
       // increment and store the next tokenId
       storage.set<u64>(TOTAL_SUPPLY, tokenId + 1)

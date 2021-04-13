@@ -1,5 +1,5 @@
 import { VMContext, base64 } from 'near-sdk-as'
-import { Context, u128 } from "near-sdk-core";
+import { Context, env, u128 } from "near-sdk-core";
 
 // explicitly import functions required by spec
 import {
@@ -24,6 +24,7 @@ const content = 'AAECAw==';
 const mintprice = u128.fromString('800000000000000000000');
 
 let currentTokenId: u64;
+let currentMix: string;
 
 describe('grant_access', () => {
   it('grants access to the given account_id for all the tokens that account has', () => {
@@ -478,9 +479,9 @@ describe('nonSpec interface', () => {
     const mixes = nonSpec.get_token_mixes(tokenId)
     expect(mixes.length).toBe(1)
     VMContext.setPredecessor_account_id(carol)
+    VMContext.setCurrent_account_id(carol)
     VMContext.setAttached_deposit(u128.fromString('10000000000000000000000000'))
     nonSpec.buy_mix(tokenId, mixes[0])
-    VMContext.setCurrent_account_id(alice)
   })
   it('should not be possible to publish over a mix that is sold', () => {
     VMContext.setAttached_deposit(mintprice);
@@ -510,5 +511,46 @@ describe('nonSpec interface', () => {
         expect(mixes[n % nonSpec.MAX_MIXES_PER_TOKEN]).toBe(bob+';nft:'+(tokenId + ((n% nonSpec.MAX_MIXES_PER_TOKEN)+1)).toString(), 'mix content ['+n.toString()+'] should be an NFT with id '+(tokenId + n - nonSpec.MAX_MIXES_PER_TOKEN).toString())
       }      
     }
-  })  
+  })
+  it('should not be possible to mint a mix twice', () => {    
+    VMContext.setAttached_deposit(mintprice);
+    currentTokenId = nonSpec.mint_to_base64(alice, content, true)
+    VMContext.setPredecessor_account_id(bob)
+    nonSpec.publish_token_mix(currentTokenId, [55,33,21])
+    const mixes = nonSpec.get_token_mixes(currentTokenId)
+    expect(mixes.length).toBe(1)
+    currentMix = mixes[0]
+
+    VMContext.setPredecessor_account_id(carol)
+    VMContext.setAttached_deposit(u128.fromString('10000000000000000000000000'))
+    nonSpec.buy_mix(currentTokenId, mixes[0])
+
+    expect(() => {
+      nonSpec.buy_mix(currentTokenId, currentMix)
+    }).toThrow()
+  })
+  it('should be possible to buy a token that was a remix', () => {
+    VMContext.setAttached_deposit(mintprice);
+    const originalTokenId = nonSpec.mint_to_base64(alice, content, true)
+    VMContext.setPredecessor_account_id(bob)
+    nonSpec.publish_token_mix(currentTokenId, [55,33,21])
+    let mixes = nonSpec.get_token_mixes(currentTokenId)
+    expect(mixes.length).toBe(1)
+    const mix = mixes[0]
+
+    VMContext.setPredecessor_account_id(carol)
+    VMContext.setAttached_deposit(u128.fromString('10000000000000000000000000'))
+    nonSpec.buy_mix(currentTokenId, mixes[0])
+
+    mixes = nonSpec.get_token_mixes(currentTokenId)
+    const remixNFTid = parseInt(mixes[0].split(';')[1].split(':')[1]) as u64
+    nonSpec.sell_token(remixNFTid, u128.fromString('20000000000000000000000000'))
+
+    VMContext.setPredecessor_account_id(alice)
+    VMContext.setAttached_deposit(u128.fromString('20000000000000000000000000'))
+    nonSpec.buy_token(remixNFTid)
+
+    const remixNFTContent = nonSpec.view_remix_content(remixNFTid)
+    expect(remixNFTContent).toBe(originalTokenId.toString()+';'+mix);
+  }) 
 })
