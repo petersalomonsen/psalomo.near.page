@@ -306,19 +306,29 @@ visualizeNoteOn(64,1);
             elm.classList.add('currentmix');
 
             if (mix.owner) {
-                let ownerHtml = `remix owned by 
-                        ${mix.owner===walletConnection.account().accountId ?
-                        `you <button onclick="exportWav()">Download</button>
-                        <button onclick="sellNFT(10,'${mix.token_id}')">Sell</button>` : mix.owner}`;
+                let ownerHtml = ''
                 
-                try {
-                    const yoctoprice = await viewTokenPrice(mix.token_id);
-                    const nftprice = nearApi.utils.format.formatNearAmount(yoctoprice);
-                    ownerHtml += `<button onclick="buyNFT('${mix.token_id}','${yoctoprice}')">Buy ${nftprice}N</button>`;
-                } catch(e) {
-                    console.error(e);
+                if (mix.owner===walletConnection.account().accountId) {
+                    ownerHtml += `remix owned by you <button onclick="exportWav()">Download</button> `;
+                    try {
+                        const yoctoprice = await viewTokenPrice(mix.token_id);
+                        const nftprice = nearApi.utils.format.formatNearAmount(yoctoprice);
+                        ownerHtml += `on sale for ${nftprice}N
+                            <button onclick="sellNFT(prompt('Sell for what price?','${nftprice}'), '${mix.token_id}')">Change</button>
+                        `;
+                    } catch(e) {
+                        ownerHtml += `<button onclick="sellNFT(prompt('Sell for what price?','10'), '${mix.token_id}')">Sell</button>`;
+                    }
+                } else {
+                    ownerHtml += `remix owned by ${mix.owner} `
+                    try {
+                        const yoctoprice = await viewTokenPrice(mix.token_id);
+                        const nftprice = nearApi.utils.format.formatNearAmount(yoctoprice);
+                        ownerHtml += `<button onclick="buyNFT('${mix.token_id}','${yoctoprice}')">Buy ${nftprice}N</button>`;
+                    } catch(e) {
+                        console.error(e);
+                    }
                 }
-
                 currentMixOwnerDiv.innerHTML = ownerHtml;
                 currentMixOwnerDiv.style.display = 'block';
             } else {
@@ -368,7 +378,6 @@ visualizeNoteOn(64,1);
             timestamp: m.content.split(';')[2],
         }));
         mymixes.forEach(m => addMixToList(m));
-        console.log(mymixes);
     }
     
 })();

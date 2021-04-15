@@ -111,9 +111,14 @@ window.buyNFT = buy;
 export async function sell(price, id = token_id) {
     toggleSpinner(true);
     console.log('selling for', convertNearToYocto(price));
-    const result = await walletConnection.account().functionCall(nearconfig.contractName, 'sell_token', { token_id: id, price: convertNearToYocto(price) });
-    console.log('token is now for sale', result);
-    alert('token is now for sale');
+    if (price) {
+        const result = await walletConnection.account().functionCall(nearconfig.contractName, 'sell_token', { token_id: id, price: convertNearToYocto(price) });
+        console.log('token is now for sale', result);
+        alert('token is now for sale');
+    } else {
+        await walletConnection.account().functionCall(nearconfig.contractName, 'remove_token_from_sale', { token_id: id });
+        alert('token is no longer for sale');
+    }
     toggleSpinner(false);
     location.reload();
 }
