@@ -1,6 +1,6 @@
 import { } from './midimixer.component.js';
 import { initVisualizer, visualizeNoteOn, clearVisualization } from './visualizer.js';
-import { connectNear, publishMix as publishMixNear, getMixes, viewTokenOwner, getMixTokenContent, getTokenContent, _base64ToArrayBuffer, buyMix } from './nearclient.js';
+import { connectNear, publishMix as publishMixNear, getMixes, viewTokenPrice, viewTokenOwner, getMixTokenContent, getTokenContent, _base64ToArrayBuffer, buyMix } from './nearclient.js';
 
 let audioWorkletNode;
 const channels = ['piano','strings','drums','guitar','bass','flute'];
@@ -272,7 +272,7 @@ visualizeNoteOn(64,1);
     toggleSpinner(false);
 
     const publicmixes = allmixes.filter(m => m[1].indexOf('nft:') === -1)
-                .sort((a,b) => parseInt(a[1])-parseInt(b[1]))
+                .sort((a,b) => parseInt(b[1])-parseInt(a[1]))
                 .map(parts => ({
                     content: parts[2].split(',').map(v => parseInt(v)),
                     timestamp: parts[1],
@@ -293,7 +293,7 @@ visualizeNoteOn(64,1);
         const elm = document.createElement('div');
         elm.classList.add('mixlistitem');
         const mixdata = mix.content;
-        elm.onclick = () => {                                
+        elm.onclick = async () => {                                
             for (let n=0;n<songdata.length;n++) {
                 const v = mixdata[n];
                 songdata[n] = v;        
@@ -306,13 +306,24 @@ visualizeNoteOn(64,1);
             elm.classList.add('currentmix');
 
             if (mix.owner) {
-                currentMixOwnerDiv.innerHTML = `remix owned by 
+                let ownerHtml = `remix owned by 
                         ${mix.owner===walletConnection.account().accountId ?
-                        `you <button onclick="exportWav()">Download</button>` : mix.owner}`;
+                        `you <button onclick="exportWav()">Download</button>
+                        <button onclick="sellNFT(10,'${mix.token_id}')">Sell</button>` : mix.owner}`;
+                
+                try {
+                    const yoctoprice = await viewTokenPrice(mix.token_id);
+                    const nftprice = nearApi.utils.format.formatNearAmount(yoctoprice);
+                    ownerHtml += `<button onclick="buyNFT('${mix.token_id}','${yoctoprice}')">Buy ${nftprice}N</button>`;
+                } catch(e) {
+                    console.error(e);
+                }
+
+                currentMixOwnerDiv.innerHTML = ownerHtml;
                 currentMixOwnerDiv.style.display = 'block';
             } else {
                 currentMixOwnerDiv.style.display = 'none';
-            }
+            }            
         };
         
         elm.innerHTML = `${mix.author}<br />
@@ -353,10 +364,11 @@ visualizeNoteOn(64,1);
             owner: await viewTokenOwner(m.token_id),
             content: await getMixTokenContent(m.token_id)
         })))).map(m => Object.assign(m, {
-            content: m.content.split(';')[2].split(',').map(v => parseInt(v)),
-            timestamp: m.content.split(';')[1],
+            content: m.content.split(';')[3]?.split(',').map(v => parseInt(v)),
+            timestamp: m.content.split(';')[2],
         }));
         mymixes.forEach(m => addMixToList(m));
+        console.log(mymixes);
     }
     
 })();

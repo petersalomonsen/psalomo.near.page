@@ -59,7 +59,7 @@ function convertNearToYocto(near) {
 
 export async function getMixTokenContent(id) {
     const result = await walletConnection.account()
-            .viewFunction(nearconfig.contractName, 'view_token_content', { token_id: id });
+            .viewFunction(nearconfig.contractName, 'view_remix_content', { token_id: id });
     return result;
 }
 
@@ -78,8 +78,8 @@ export async function getTokenContent() {
         }
     }
 }
-export async function viewTokenPrice() {
-    currentTokenPrice = await walletConnection.account().viewFunction(nearconfig.contractName, 'view_price', { token_id: token_id });
+export async function viewTokenPrice(id = token_id) {
+    currentTokenPrice = await walletConnection.account().viewFunction(nearconfig.contractName, 'view_price', { token_id: id });
     return currentTokenPrice;
 }
 
@@ -93,14 +93,13 @@ export async function viewTokenOwner(id = token_id) {
     return tokenOwner;
 }
 
-export async function buy() {
+export async function buy(id = token_id, deposit = currentTokenPrice) {
     toggleSpinner(true);
     try {
         if (!walletConnection.getAccountId()) {
             login();
         }
-        const deposit = currentTokenPrice;
-        const result = await walletConnection.account().functionCall(nearconfig.contractName, 'buy_token', { token_id: token_id }, undefined, deposit);
+        const result = await walletConnection.account().functionCall(nearconfig.contractName, 'buy_token', { token_id: id }, undefined, deposit);
         console.log('succeeded buying', result);
     } catch (e) {
         alert(e.message);
@@ -109,10 +108,10 @@ export async function buy() {
 }
 window.buyNFT = buy;
 
-export async function sell(price) {
+export async function sell(price, id = token_id) {
     toggleSpinner(true);
     console.log('selling for', convertNearToYocto(price));
-    const result = await walletConnection.account().functionCall(nearconfig.contractName, 'sell_token', { token_id: token_id, price: convertNearToYocto(price) });
+    const result = await walletConnection.account().functionCall(nearconfig.contractName, 'sell_token', { token_id: id, price: convertNearToYocto(price) });
     console.log('token is now for sale', result);
     alert('token is now for sale');
     toggleSpinner(false);
@@ -165,17 +164,9 @@ export async function connectNear() {
     }
     const tokenOwner = await viewTokenOwner();
     document.getElementById('ownerspan').innerHTML = tokenOwner;
-    /*try {
-        await viewListeningPrice();
-        if (tokenOwner !== walletConnection.getAccountId()) {
-            document.getElementById('playpriceinfospan').innerHTML = `you will be prompted to transfer ${nearApi.utils.format.formatNearAmount(listeningPrice)}N everytime you reload this page`;
-        }
-    } catch (e) {
-        console.log('not available for listening by others');
-    }*/
 
     try {
-        document.getElementById('pricespan').innerHTML = (parseFloat(new BN(await viewTokenPrice(), 10).div(new BN(10, 10).pow(new BN(21, 10))).toString()) / 1000).toFixed(3);
+        document.getElementById('pricespan').innerHTML = nearApi.utils.format.formatNearAmount(await viewTokenPrice());
         document.getElementById('buyarea').style.display = 'block';
     } catch (e) {
         //console.log(e);
