@@ -297,7 +297,7 @@ export function buy_token(token_id: TokenId): ContractPromiseBatch {
 
   if (remixTokens.contains(token_id)) {
     const remixcontentparts = remixTokens.get(token_id)!.split(';')
-    const original_token_id = parseInt(remixcontentparts[0]) as u64
+    const original_token_id = u128.fromString(remixcontentparts[0]).toU64();
     const original_token_owner = tokenToOwner.get(original_token_id)!
     const remix_author = remixcontentparts[1]
     // 2% to original content owner
@@ -377,7 +377,7 @@ export function publish_token_mix(token_id: TokenId, mix: u8[]): void {
       const mixparts = mixes[n].split(';')
       if (mixparts.length > 2) {
         // is not yet an NFT
-        const mixBlockTimestamp: u64 = parseInt(mixparts[1]) as u64
+        const mixBlockTimestamp: u64 = u128.fromString(mixparts[1]).toU64()
         if (mixBlockTimestamp < oldestMixBlockTimestamp) {
           oldestMixBlockTimestamp = mixBlockTimestamp
           oldestAvailableMixIndex = n
