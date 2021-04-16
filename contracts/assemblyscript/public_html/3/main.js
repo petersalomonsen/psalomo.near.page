@@ -332,24 +332,16 @@ visualizeNoteOn(64,1);
                 currentMixOwnerDiv.innerHTML = ownerHtml;
                 currentMixOwnerDiv.style.display = 'block';
             } else {
-                currentMixOwnerDiv.style.display = 'none';
-            }            
+                currentMixOwnerDiv.innerHTML = `No owner yet for this remix. <button>Buy 10N</button>`;
+                currentMixOwnerDiv.querySelector('button').onclick = () => buyMix(mix.identitfier);
+                currentMixOwnerDiv.style.display = 'block';
+            }
         };
         
         elm.innerHTML = `${mix.author}<br />
                 <span class="mixlistdate">${new Date(parseInt(mix.timestamp)/1000000).toLocaleString()}</span>`;
         listitemcontainer.appendChild(elm);
-
-        if (mix.owner) {
-            
-        } else {
-            const buybutton = document.createElement('button');
-            buybutton.classList.add('upvotebutton');
-            buybutton.innerHTML = 'buy';
-            buybutton.title = 'buy';            
-            buybutton.onclick = () => buyMix(mix.identitfier);
-            listitemcontainer.appendChild(buybutton);
-        }    
+    
         latest20element.appendChild(listitemcontainer);
     }     
 
