@@ -389,4 +389,11 @@ visualizeNoteOn(64,1);
         ownedMixesContent.forEach(m => addMixToList(m));
     }
     
+    if (!currentMixElement) {
+        currentMixElement = document.querySelector('.mixlistitem');
+    }
+
+    if (ownedmixes.length === 20) {
+        document.querySelector('#postmixbutton').style.display = 'none';
+    }
 })();
