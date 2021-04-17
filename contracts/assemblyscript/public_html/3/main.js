@@ -352,7 +352,13 @@ visualizeNoteOn(64,1);
         elm.innerHTML = `${mix.author}<br />
                 <span class="mixlistdate">${new Date(parseInt(mix.timestamp)/1000000).toLocaleString()}</span>`;
         listitemcontainer.appendChild(elm);
-    
+
+        if (mix.owner === walletConnection.getAccountId()) {
+            const ownerindicatorelement = document.createElement('div');
+            ownerindicatorelement.innerHTML = '*';
+            ownerindicatorelement.style.textAlign = 'right';
+            listitemcontainer.appendChild(ownerindicatorelement);
+        }
         latest20element.appendChild(listitemcontainer);
     }     
 
