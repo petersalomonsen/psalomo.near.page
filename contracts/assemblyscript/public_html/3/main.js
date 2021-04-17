@@ -13,6 +13,8 @@ const songduration = partduration * songlength;
 const channelpatternmap =  {"0":[0,1,6,13],"1":[0,2,7,17],"2":[0,5,9,12],"3":[0,4,8,15],"4":[0,3,11,14],"5":[0,10,16]};
 const patternentrycolors = ['#000','#f80','#08f','#f8f','#8f8','#ff8','#8ff','#88f','#f88'];
 const currentMixOwnerDiv = document.querySelector('#currentMixOwner');
+const existingPublishedMixes = [];
+
 document.querySelector("#timeindicator").max = songduration;
 
 async function getWasmBytes() {
@@ -210,7 +212,15 @@ window.publishMix = () => {
         publishData.push(v.pan);
     });
 
-    publishMixNear(Uint8Array.from(publishData));
+    const mixu8 = Uint8Array.from(publishData);
+    const alreadyPublished = existingPublishedMixes.find(m =>
+            m.content?.reduce((p, c, n) => p && mixu8[n] === c, true));
+    if (alreadyPublished) {
+        alert('That remix is already published');
+        return;
+    } else {
+        publishMixNear(mixu8);
+    }
 };
 
 const grid = document.getElementById('songpatternsgrid');
@@ -287,6 +297,7 @@ visualizeNoteOn(64,1);
     const patternElements = document.querySelectorAll('.patternelement');
 
     const addMixToList = (mix) => {
+        existingPublishedMixes.push(mix);
         const listitemcontainer = document.createElement('div');    
         listitemcontainer.style.display = 'grid';
         listitemcontainer.style.gridTemplateColumns = 'auto auto';  
@@ -359,7 +370,7 @@ visualizeNoteOn(64,1);
     }
 
     if (ownedmixes.length > 0) {
-        const mymixes = (await Promise.all(ownedmixes.map(m => ({
+        const ownedMixesContent = (await Promise.all(ownedmixes.map(m => ({
             token_id: m[1].substr('nft:'.length),
             author: m[0]
         })).map(async m => Object.assign(m, {
@@ -369,7 +380,7 @@ visualizeNoteOn(64,1);
             content: m.content.split(';')[3]?.split(',').map(v => parseInt(v)),
             timestamp: m.content.split(';')[2],
         }));
-        mymixes.forEach(m => addMixToList(m));
+        ownedMixesContent.forEach(m => addMixToList(m));
     }
     
 })();
