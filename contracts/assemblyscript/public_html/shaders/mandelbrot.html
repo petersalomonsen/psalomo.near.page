@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: #000;
+        }
+        canvas {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <p></p>
+    <canvas>Your browser does not seem to support
+        HTML5 canvas.</canvas>
+</body>
+<script type="x-shader/x-vertex" id="vertex-shader">
+#version 100
+
+attribute vec2 a_position;
+void main() {
+    gl_Position = vec4(a_position, 0, 1);
+}
+</script>
+<script type="x-shader/x-fragment" id="fragment-shader">
+#version 100
+precision highp float;
+uniform vec2 resolution;
+uniform float time;
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+void main(){
+  #define product(a, b) vec2(a.x*b.x-a.y*b.y, a.x*b.y+a.y*b.x)
+  #define PI 3.1415926538
+  float speed = -0.1;
+  float t = 2.5 * sin(PI * 3.0/2.0 + time * speed) + 3.0;
+
+  float res = resolution.x > resolution.y ? resolution.x : resolution.y;
+  float scale = (6.0/pow(t,1.0 + t));
+  vec2 center = vec2(0.9962,-0.289);
+  vec2 p = (gl_FragCoord.xy - resolution * 0.5) / res * scale;
+  vec2 z;
+  float rotation = time * 0.05;
+  vec2 c = vec2(p.x*cos(rotation)-p.y*sin(rotation),p.x*sin(rotation)+p.y*cos(rotation)) - center;
+  
+  float color = 0.0;
+  float max_iteration_float = exp(t) * 20.0;
+  
+  for (int iteration = 0;iteration < 1000;iteration++) {
+    z = product(z,z) + c;
+    
+    color += 1.0;
+    if (color >= max_iteration_float) {
+      break;
+    }
+    if (z.x*z.x + z.y*z.y > 4.0) {
+      break;
+    }
+  }
+  p.xy = z;
+  float pan = (sin(time * 1.0) + 1.0) / 2.0;
+  color = (color  / max_iteration_float);
+  vec3 rgb = hsv2rgb(vec3(0.5 + 0.2 * color,1.0,color ));
+  gl_FragColor=vec4(rgb,1);
+}
+</script>
+<script>
+    ; (function () {
+        "use strict"
+        window.addEventListener("load", setupWebGL, false);
+        var gl,
+            program;
+        function setupWebGL(evt) {
+            window.removeEventListener(evt.type, setupWebGL, false);
+            if (!(gl = getRenderingContext()))
+                return;
+
+            var source = document.querySelector("#vertex-shader").innerHTML;
+            var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, source);
+            gl.compileShader(vertexShader);
+            source = document.querySelector("#fragment-shader").innerHTML
+            var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, source);
+            gl.compileShader(fragmentShader);
+
+            var compiled = gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS);
+            console.log('Shader compiled successfully: ' + compiled);
+            var compilationLog = gl.getShaderInfoLog(fragmentShader);
+            console.log('Shader compiler log: ' + compilationLog);
+            program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            gl.detachShader(program, vertexShader);
+            gl.detachShader(program, fragmentShader);
+            gl.deleteShader(vertexShader);
+            gl.deleteShader(fragmentShader);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                var linkErrLog = gl.getProgramInfoLog(program);
+                cleanup();
+                document.querySelector("p").innerHTML =
+                    "Shader program did not link successfully. "
+                    + "Error log: " + linkErrLog;
+                return;
+            }
+
+            initializeAttributes();
+
+            gl.useProgram(program);
+
+            var resolutionUniformLocation = gl.getUniformLocation(program, "resolution");
+            gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+            var timeUniformLocation = gl.getUniformLocation(program, "time");
+            gl.uniform1f(timeUniformLocation, 0.0);
+
+            var positionLocation = gl.getAttribLocation(program, "a_position");
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            const startTime = new Date().getTime();
+            function render() {
+                window.requestAnimationFrame(render);
+                gl.uniform1f(timeUniformLocation, (new Date().getTime() - startTime) / 1000.0);
+                gl.drawArrays(gl.TRIANGLES, 0, 6);
+            }
+
+            render();
+//            cleanup();
+        }
+
+        var buffer;
+        function initializeAttributes() {
+            gl.enableVertexAttribArray(0);
+            buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([
+                    -1.0, -1.0,
+                    1.0, -1.0,
+                    -1.0, 1.0,
+                    -1.0, 1.0,
+                    1.0, -1.0,
+                    1.0, 1.0]),
+                gl.STATIC_DRAW
+            );
+        }
+
+        function cleanup() {
+            gl.useProgram(null);
+            if (buffer)
+                gl.deleteBuffer(buffer);
+            if (program)
+                gl.deleteProgram(program);
+        }
+
+        function getRenderingContext() {
+            var canvas = document.querySelector("canvas");
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            var gl = canvas.getContext("webgl")
+                || canvas.getContext("experimental-webgl");
+            if (!gl) {
+                var paragraph = document.querySelector("p");
+                paragraph.innerHTML = "Failed to get WebGL context."
+                    + "Your browser or device may not support WebGL.";
+                return null;
+            }
+            gl.viewport(0, 0,
+                gl.drawingBufferWidth, gl.drawingBufferHeight);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            return gl;
+        }
+    })();
+</script>
+
+</html>

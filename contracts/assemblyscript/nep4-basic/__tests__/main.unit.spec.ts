@@ -1,4 +1,4 @@
-import { VMContext, base64, base58, util } from 'near-sdk-as'
+import { VMContext, base64, util } from 'near-sdk-as'
 import { Context, u128 } from 'near-sdk-core';
 import { sha256HashInit, sha256HashUpdate, sha256HashFinal } from '../../../../node_modules/wasm-crypto/assembly/crypto';
 
@@ -11,6 +11,9 @@ import {
   check_access,
   get_token_owner,
   LISTEN_REQUEST_TIMEOUT,
+  nft_token,
+  nft_transfer,
+  nft_tokens_for_owner
 } from '../main'
 
 // wrap all other functions in `nonSpec` variable, to make it clear when
@@ -710,6 +713,47 @@ describe('nonSpec interface', () => {
   });
 });
 
+describe('NEP-171', () => {
+  it('should view token', () => {
+    expect(nft_token('1')).toBeNull();
+  });
+  it('allows owner to transfer given `token_id` to given `owner_id`', () => {
+    // Alice has a token
+    VMContext.setAttached_deposit(mintprice);
+    currentTokenId = nonSpec.mint_to_base64(alice, content);
+    const tokenBeforeTransfer = nft_token(currentTokenId.toString())!
+    expect(tokenBeforeTransfer.owner_id).toBe(alice)
+    expect(tokenBeforeTransfer.owner_id).not.toBe(bob)
+
+    // Alice transfers her token to Bob
+    VMContext.setPredecessor_account_id(alice)
+
+    expect(() => {
+      VMContext.setAttached_deposit(u128.Zero)
+      nft_transfer(bob, currentTokenId.toString(), 0, null)
+    }).toThrow();
+
+    VMContext.setAttached_deposit(u128.One)
+    expect(nft_transfer(bob, currentTokenId.toString(), 0, null)).toBe(true);
+
+    const tokenAfterTransfer = nft_token(currentTokenId.toString())!
+
+    expect(tokenAfterTransfer.owner_id).toBe(bob)
+    expect(tokenAfterTransfer.owner_id).not.toBe(alice)
+  })
+});
+it('should list tokens owned by account', () => {
+  VMContext.setAttached_deposit(mintprice)
+  nonSpec.mint_to_base64(alice, content)
+  nonSpec.mint_to_base64(alice, content)
+  nonSpec.mint_to_base64(bob, content)
+  const alicetokens = nft_tokens_for_owner(alice, 0, 100)
+  expect(alicetokens.length).toBe(2)
+  const bobtokens = nft_tokens_for_owner(bob, 0, 100)
+  expect(bobtokens.length).toBe(1)
+  expect(bobtokens[0].id).toBe('3');
+  expect(bobtokens[0].owner_id).toBe(bob);
+});
 describe('web4', () => {
   it('should be possible to upload and get web4 content', () => {
     VMContext.setCurrent_account_id('web4');
@@ -718,5 +762,11 @@ describe('web4', () => {
     nonSpec.upload_web_content('/index.html', base64.encode(util.stringToBytes(content)));
     const response = nonSpec.web4_get({ path: '/index.html', accountId: null, params: new Map(), preloads: new Map(), query: new Map() });
     expect(response.body).toStrictEqual(util.stringToBytes(content));
+  });
+  it('should get an svg for a token', () => {
+    VMContext.setCurrent_account_id('web4');
+    VMContext.setPredecessor_account_id('web4');
+    const response = nonSpec.web4_get({ path: '/nftimage/1.svg', accountId: null, params: new Map(), preloads: new Map(), query: new Map() });
+    expect(util.bytesToString(response.body)!.includes('>#1</text>')).toBeTruthy();
   });
 });
