@@ -19,9 +19,9 @@ describe('remixtokens', () => {
         const signer2AccountId = Buffer.from(account2kp.publicKey.data).toString('hex');
         const signer3AccountId = Buffer.from(account3kp.publicKey.data).toString('hex');
 
-        keyStore2.setKey('default', signer1AccountId, account1kp);
-        keyStore2.setKey('default', signer2AccountId, account2kp);
-        keyStore2.setKey('default', signer3AccountId, account3kp);
+        keyStore2.setKey('testnet', signer1AccountId, account1kp);
+        keyStore2.setKey('testnet', signer2AccountId, account2kp);
+        keyStore2.setKey('testnet', signer3AccountId, account3kp);
 
         console.log(contractName, signer1AccountId, signer2AccountId, signer3AccountId);
 
@@ -31,7 +31,7 @@ describe('remixtokens', () => {
                 keyStore
             },
             nodeUrl: "https://rpc.testnet.near.org",
-            networkId: "default"
+            networkId: "testnet"
         });
 
         const devAccount = await near.account(contractName);

@@ -1,6 +1,8 @@
 import { PersistentMap, storage, context, ContractPromiseBatch, base64, util } from 'near-sdk-as'
 import { Storage, u128 } from 'near-sdk-core'
 import { sha256HashInit, sha256HashUpdate, sha256HashFinal } from '../../../node_modules/wasm-crypto/assembly/crypto';
+import { Token } from './nep-171/token';
+import { NFTContractMetaData } from './nep-171/metadata';
 
 /**************************/
 /* DATA TYPES AND STORAGE */
@@ -23,7 +25,6 @@ export const LISTEN_REQUEST_TIMEOUT: u64 = 5 * 60 * 1000000000 // 5 secs
 // The strings used to index variables in storage can be any string
 // Let's set them to single characters to save storage space
 const tokenToOwner = new PersistentMap<TokenId, AccountId>('a')
-
 
 // Note that with this implementation, an account can only set one escrow at a
 // time. You could make values an array of AccountIds if you need to, but this
@@ -158,6 +159,98 @@ export function check_access(account_id: string): boolean {
 // Get an individual owner by given `tokenId`
 export function get_token_owner(token_id: TokenId): string {
   return tokenToOwner.getSome(token_id)
+}
+
+/********************
+ * NEP-171
+ ********************/
+
+ export function nft_metadata(): NFTContractMetaData {
+  return {
+    spec: 'nft-1.0.0',
+    name: 'WebAssembly Music - Peter Salomonsen',
+    symbol: 'WASM',
+    base_uri: 'https://psalomo.near.page'
+  }
+}
+
+export function nft_transfer(
+  receiver_id: string,
+  token_id: string,
+  approval_id: u64,
+  memo: string | null,
+): boolean {
+  assert(context.attachedDeposit == u128.One, 'Caller of the method must attach a deposit of 1 yoctoⓃ for security purposes')
+  const int_token_id = U64.parseInt(token_id)
+  transfer(receiver_id, int_token_id)
+  return true;
+}
+
+export function nft_ping_wallet(receiver_id: string): void {
+
+}
+
+function createTokenObject(token_id: TokenId, owner_id: string): Token {
+  const mediaUrl = "https://"+ context.contractName +".page/nftimage/"+token_id.toString()+".svg";
+  if (token_id > 1 && remixTokens.contains(token_id)) {
+    const remixcontentparts = remixTokens.get(token_id)!.split(';')
+    const original_token_id = u128.fromString(remixcontentparts[0]).toU64();
+    const remix_author = remixcontentparts.length > 1 ? remixcontentparts[1] : ""
+    return {
+        id: token_id.toString(),
+        owner_id: owner_id,
+        metadata: {
+          title: "Remix (#"+token_id.toString()+") of WebAssembly Music #"+original_token_id.toString(),
+          description: "Remix by "+remix_author+" of WebAssembly Music by Peter Salomonsen",
+          media: mediaUrl,
+          media_hash: ""
+        }
+    } as Token
+  } else {
+    return {
+        id: token_id.toString(),
+        owner_id: owner_id,
+        metadata: {
+          title: "WebAssembly Music #"+token_id.toString(),
+          description: "WebAssembly Music by Peter Salomonsen",
+          media: mediaUrl,
+          media_hash: ""
+        }
+    } as Token
+  }
+}
+
+export function nft_token(token_id: string): Token | null {
+  const int_token_id = U64.parseInt(token_id);
+  if (!tokenToOwner.contains(int_token_id)) {
+      return null;
+  }
+  const owner = tokenToOwner.getSome(int_token_id)
+  return createTokenObject(int_token_id, owner);
+}
+
+export function nft_tokens_for_owner(
+  account_id: string,
+  from_index: u64, // default: 0
+  limit: i32 // default: unlimited (could fail due to gas limit)
+): Token[] {
+  const tokens = new Array<Token>()
+  const numTokens = I32.parseInt(storage.getPrimitive<u64>(TOTAL_SUPPLY, 0).toString())
+  let skipped = 0;
+  for (let n = 1; n < numTokens; n++) {
+      const owner = tokenToOwner.getSome(n)
+      if (owner == account_id) {
+          if(skipped == from_index) {
+            tokens.push(createTokenObject(n, owner));
+            if (limit > 0 && tokens.length == limit) {
+              break;
+            }
+          } else {
+            skipped++;
+          }
+      }
+  }
+  return tokens
 }
 
 /********************/
@@ -511,7 +604,14 @@ export function upload_web_content(filename: string, contentbase64: string): voi
 
 export function web4_get(request: Web4Request): Web4Response {
   const requestedpath = WEB4_STORAGEKEY_PREFIX + request.path;
-  if (!Storage.contains(requestedpath)) {
+  if(request.path.startsWith('/nftimage/')) {
+    const tokenId = request.path.substring('/nftimage/'.length,request.path.length-'.svg'.length);
+    return { contentType: 'image/svg+xml', body: util.stringToBytes(`<svg viewBox="0 0 300 300" style="background-color:black; fill: white; font-family: sans-serif;" xmlns="http://www.w3.org/2000/svg">  
+    <text x="150" y="130" font-family="sans-serif" text-anchor="middle">${context.contractName}</text>
+    <text x="150" y="170" font-family="sans-serif" text-anchor="middle">#${tokenId}</text>
+    </svg>`), preloadUrls: [] };
+    ;
+  } else if (!Storage.contains(requestedpath)) {
     return { contentType: 'text/html; charset=UTF-8', body: util.stringToBytes('not found'), preloadUrls: [] };
   } else {
     const content = Storage.getBytes(requestedpath)!;

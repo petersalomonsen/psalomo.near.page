@@ -18,8 +18,8 @@ describe('pay for listening', () => {
     const signer1AccountId = Buffer.from(account1kp.publicKey.data).toString('hex');
     const signer2AccountId = Buffer.from(account2kp.publicKey.data).toString('hex');
 
-    keyStore2.setKey('default', signer1AccountId, account1kp);
-    keyStore2.setKey('default', signer2AccountId, account2kp);
+    keyStore2.setKey('testnet', signer1AccountId, account1kp);
+    keyStore2.setKey('testnet', signer2AccountId, account2kp);
 
     console.log(contractName, signer1AccountId, signer2AccountId);
 
@@ -29,7 +29,7 @@ describe('pay for listening', () => {
         keyStore
       },
       nodeUrl: "https://rpc.testnet.near.org",
-      networkId: "default"
+      networkId: "testnet"
     });
 
     const devAccount = await near.account(contractName);
@@ -76,9 +76,9 @@ describe('pay for listening', () => {
     const signer2AccountId = Buffer.from(account2kp.publicKey.data).toString('hex');
     const signer3AccountId = Buffer.from(account3kp.publicKey.data).toString('hex');
 
-    keyStore2.setKey('default', signer1AccountId, account1kp);
-    keyStore2.setKey('default', signer2AccountId, account2kp);
-    keyStore2.setKey('default', signer3AccountId, account3kp);
+    keyStore2.setKey('testnet', signer1AccountId, account1kp);
+    keyStore2.setKey('testnet', signer2AccountId, account2kp);
+    keyStore2.setKey('testnet', signer3AccountId, account3kp);
 
     console.log(contractName, signer1AccountId, signer2AccountId, signer3AccountId);
 
@@ -88,7 +88,7 @@ describe('pay for listening', () => {
         keyStore
       },
       nodeUrl: "https://rpc.testnet.near.org",
-      networkId: "default"
+      networkId: "testnet"
     });
 
     const devAccount = await near.account(contractName);
@@ -151,8 +151,8 @@ describe('pay for listening', () => {
     const guestKeyPair = nearAPI.utils.KeyPairEd25519.fromRandom();
     const guestAccountId = Buffer.from(guestKeyPair.publicKey.data).toString('hex');
     
-    keyStore2.setKey('default', signer1AccountId, account1kp);
-    keyStore2.setKey('default', guestAccountId, guestKeyPair);
+    keyStore2.setKey('testnet', signer1AccountId, account1kp);
+    keyStore2.setKey('testnet', guestAccountId, guestKeyPair);
 
     console.log(contractName, signer1AccountId, guestAccountId);
 
@@ -162,7 +162,7 @@ describe('pay for listening', () => {
         keyStore
       },
       nodeUrl: "https://rpc.testnet.near.org",
-      networkId: "default"
+      networkId: "testnet"
     });
 
     const devAccount = await near.account(contractName);
@@ -175,7 +175,7 @@ describe('pay for listening', () => {
     await guestAccount.addKey(guestFunctionAccessKeyPair.publicKey, contractName, ['request_listening'], '10000000000000000000000');
     await guestAccount.deleteKey(guestKeyPair.publicKey);
 
-    keyStore2.setKey('default', guestAccountId, guestFunctionAccessKeyPair);
+    keyStore2.setKey('testnet', guestAccountId, guestFunctionAccessKeyPair);
 
     await account1.functionCall(contractName, 'buy_listening_credit', {}, null, '10000000000000000000000');
 
