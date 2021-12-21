@@ -1,5 +1,5 @@
-WebAssembly on NEAR protocol - NFT smart contract
-=================================================
+WebAssembly Music on NEAR protocol - NFT smart contract
+=======================================================
 
 Music, web UI and contract stored on entirely NEAR protocol blockchain, see it live in action at
 
