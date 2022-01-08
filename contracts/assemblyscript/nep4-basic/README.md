@@ -50,3 +50,8 @@ This was the first transaction:
 
 https://explorer.near.org/transactions/BP4upKRtrJSYZa45Hp6voVny3GdUsCB4moGx7YJZ9AU7
 
+# Web4
+
+Uploading web content.
+
+`NEAR_ENV=mainnet scripts/uploadweb4content.sh psalomo.near "/" contracts/assemblyscript/public_html/index.html`
