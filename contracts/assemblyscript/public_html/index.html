@@ -38,6 +38,39 @@
                 height: 100%;
                 width: 100%;
             }
+            #loadercontainer {
+                position: fixed;
+                left: 0px;
+                top: 0px;
+                width: 100%;
+                height: 100%;
+                display: none;
+                justify-content: center;
+                align-items: center;
+                z-index: 100;
+                background-color: rgba(255, 255, 255, 0.7);
+            }
+
+            .loader {
+                border: 16px solid #f3f3f3;
+                /* Light grey */
+                border-top: 16px solid #3498db;
+                /* Blue */
+                border-radius: 50%;
+                width: 120px;
+                height: 120px;
+                animation: spin 2s linear infinite;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
         </style>
     </head>
     <body>
@@ -50,41 +83,53 @@
                 This means that the lifespan of what you find here does not depend on some maintainer subscribing to cloud or hosting services,
                 but rather on the blockchain.
             </p>
-            <b>November 2021</b><br />
+            <h3>January 2022</h3>
+            <p>
+                When this smart contract there were no support for showing collectibles in the NEAR wallet.
+                Now that there is, you may also see collectibles from here if you call the <b>nft_ping_wallet</b>
+                function on this smart contract.
+            </p>
+            <p>Click <a href="#" onclick="javascript:nft_ping_wallet()">here</a> to make your NEAR wallet aware of collectibles from this contract.
+            After the transaction is completed, go to <a href="https://wallet.near.org">wallet.near.org</a> to see your collectibles.
+            </p>
+            <h3>November 2021</h3>
             <a href="/play?id=14">Music from NEARCON 2021</a>
             <p>
                 And also a player that will cycle through some of the music NFTs in this contract.
             </p>
-            <b>July 2021</b><br />
+            <h3>July 2021</h3>
             <a href="/musicspacetrail.html">Music space trail</a>
             <p>
                 A little exhibition exclusively on NEAR. Follow the music space trail, and see every tone coming towards you and pass by.
                 There are two NFTs involved, the instruments and the composition.
                 Visiting costs two credits, you can buy credits after logging in.
             </p>
-            <b>May / June 2021</b><br />
+            <h3>May / June 2021</h3>
             <a href="/nftparts1/index.html">Short editable music NFTs</a>
             <p>
                 Use the pianoroll, a computer or midi-keyboard to create/record music. The instrument kit
                 is stored as a WebAssembly binary on NEAR. Publish your track, get 4 (out of 10) NEAR for the first sale, and 2% for re-sales.
                 See the demo on <a target="_blank" href="https://youtu.be/iyIZy7pREI4">youtube</a>.
             </p>
-            <b>April 2021</b><br />
+            <h3>April 2021</h3>
             <a href="/nftmusic/3/index.html">Remixable WebAssembly music</a>
             <p>
                 Create remixes of the music and post them for sale. Remixes can be posted, and will replace the unsold, as long as less than 20 are sold.
                 When 20 are sold, no more remixes can be posted.
             </p>
-            <b>March 2021</b><br />
+            <h3>March 2021</h3>
             <a href="/nftmusic/2/index.html">The second WebAssembly music NFT on NEAR</a>
             <p>
                 Now with a player in the browser, and also with a mixer UI. The owner may generate and download a WAV file in the browser.
             </p>
-            <b>February 2021</b><br />
+            <h3>February 2021</h3>
             <a href="/nftmusic/1/index.html">The first WebAssembly music NFT on NEAR</a>
             <p>
                 An tiny executable file, stored on the blockchain. The owner can download and run the file to create an audio file for the music.
             </p>
+        </div>
+        <div id="loadercontainer">
+            <div class="loader"></div>
         </div>
         <div id="copyright">
             Copyright (c) 2021 - Peter Salomonsen
@@ -273,6 +318,40 @@
                         gl.clear(gl.COLOR_BUFFER_BIT);
                         return gl;
                     }
+                })();
+            </script>
+            <script src="https://cdn.jsdelivr.net/gh/nearprotocol/near-api-js/dist/near-api-js.js"></script>
+            <script>
+                const nearconfig = {
+                    nodeUrl: 'https://rpc.mainnet.near.org',
+                    walletUrl: 'https://wallet.mainnet.near.org',
+                    helperUrl: 'https://helper.mainnet.near.org',
+                    networkId: 'mainnet',
+                    contractName: 'psalomo.near',
+                    deps: {
+                        keyStore: null
+                    }
+                };
+                function toggleSpinner(state) {
+                    if (state) {
+                        document.getElementById('loadercontainer').style.display = 'flex';
+                    } else {
+                        document.getElementById('loadercontainer').style.display = 'none';
+                    }
+                }
+                window.toggleSpinner = toggleSpinner;
+
+                (async function() {
+                    nearconfig.deps.keyStore = new nearApi.keyStores.BrowserLocalStorageKeyStore();
+                    walletConnection = new nearApi.WalletConnection(await nearApi.connect(nearconfig));
+                    
+                    window.nft_ping_wallet = async () => {
+                        toggleSpinner(true);
+                        await walletConnection.account().functionCall(nearconfig.contractName, 'nft_ping_wallet', {
+                            receiver_id: walletConnection.account().accountId
+                        });
+                        toggleSpinner(false);
+                    };
                 })();
             </script>
     </body>
