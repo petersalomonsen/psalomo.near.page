@@ -169,8 +169,7 @@ export function get_token_owner(token_id: TokenId): string {
   return {
     spec: 'nft-1.0.0',
     name: 'WebAssembly Music - Peter Salomonsen',
-    symbol: 'WASM',
-    base_uri: 'https://psalomo.near.page'
+    symbol: 'WASM'
   }
 }
 
