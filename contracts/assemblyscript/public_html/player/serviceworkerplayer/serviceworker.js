@@ -118,23 +118,20 @@ self.addEventListener('fetch', (event) =>
             const requestedRangeStart = parseInt(range[1]);
             let requestedRangeEnd = range[2] ? parseInt(range[2]) : currentBytePos;
 
-            while(currentBytePos < requestedRangeStart && (
-                currentBytePos === totalLength ||
-                currentBytePos-requestedRangeStart > 4096
-            )) {
+            while(currentBytePos - requestedRangeStart < 1) {
                 await new Promise(r => setTimeout(r, 100));
             }
-            if (requestedRangeEnd > currentBytePos) {
-                requestedRangeEnd = currentBytePos;
+            if (requestedRangeEnd >= currentBytePos) {
+                requestedRangeEnd = currentBytePos - 1;
             }
 
-            const returnedRangeEnd = currentBytePos-requestedRangeStart;
-            const respondblob = new Blob([wavfilebytes.buffer.slice(requestedRangeStart, returnedRangeEnd)],{type: 'audio/wav'});
+            const returnedRangeEnd = requestedRangeEnd;
+            const respondblob = new Blob([wavfilebytes.buffer.slice(requestedRangeStart, returnedRangeEnd + 1)],{type: 'audio/wav'});
             resolve(new Response(respondblob, {
                 status: 206,
                 statusText: 'Partial Content',
                 headers: {
-                    'Content-Range': `bytes ${requestedRangeStart}-${requestedRangeEnd - 1}/${totalLength}`
+                    'Content-Range': `bytes ${requestedRangeStart}-${returnedRangeEnd}/${totalLength}`
                 }
             }));
         } else {
