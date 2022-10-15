@@ -57,7 +57,7 @@ function writeString(view, offset, string) {
 
 let wasmInstancePromise = new Promise(async resolve => {
     console.log('starting wasm');
-    resolve((await WebAssembly.instantiate(await (await fetch('nearcon.wasm')).arrayBuffer(),
+    resolve((await WebAssembly.instantiate(await (await fetch('music.wasm')).arrayBuffer(),
         {
             environment: {
                 SAMPLERATE: SAMPLERATE
@@ -127,11 +127,14 @@ self.addEventListener('fetch', (event) =>
             if (requestedRangeEnd > currentBytePos) {
                 requestedRangeEnd = currentBytePos;
             }
-            const respondblob = new Blob([wavfilebytes.buffer.slice(requestedRangeStart, currentBytePos-requestedRangeStart)],{type: 'audio/wav'});
+
+            const returnedRangeEnd = currentBytePos-requestedRangeStart;
+            const respondblob = new Blob([wavfilebytes.buffer.slice(requestedRangeStart, returnedRangeEnd)],{type: 'audio/wav'});
             resolve(new Response(respondblob, {
                 status: 206,
+                statusText: 'Partial Content',
                 headers: {
-                    'Content-Range': `bytes ${requestedRangeStart}-${requestedRangeEnd}/${totalLength}`
+                    'Content-Range': `bytes ${requestedRangeStart}-${requestedRangeEnd - 1}/${totalLength}`
                 }
             }));
         } else {
