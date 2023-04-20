@@ -43,29 +43,9 @@ export default {
                 writeFileSync('index_bundle.html', html);
 
                 const dataUri = `data:text/html;base64,${Buffer.from(html).toString('base64')}`;
-                writeFileSync(`nearbos.jsx`, `
-State.init({musicdata: null, musicrequest: null});
-function playAudio() {
-    State.update({musicrequest: true}); 
-}
+                const widgetjsx = readFileSync('widget.jsx').toString();
 
-function musicReceived(musicdata) {
-    const blob = new Blob([musicdata], {
-        type: "audio/wav"
-    });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio();
-    audio.src = url;
-    audio.play();
-}
-
-const iframe = <iframe message={state.musicrequest} onMessage={(msg) => musicReceived(msg.musicdata)} style={{ width: "500px", height: "230px" }} src="${dataUri}"></iframe>;
-
-return <>
-<button onClick={() => playAudio()}>Play</button>
-{ iframe }
-</>
-`)
+                writeFileSync(`nearbos.jsx`, widgetjsx.replace('IFRAME_DATA_URI', dataUri));
             }
         }
     ]
