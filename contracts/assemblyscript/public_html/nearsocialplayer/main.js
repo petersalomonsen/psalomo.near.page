@@ -46,26 +46,33 @@ function toggleSpinner(state) {
     }
 }
 
-const token_data = await getData('nft_token',tokenId);
+const token_data = await getData('nft_token', tokenId);
 document.getElementById('ownerspan').innerHTML = token_data.owner_id;
 
 const gzippedBase64 = await getData('view_token_content_base64', tokenId);
 const wasmBytes = await getWasmBytesFromGzippedBase64(gzippedBase64);
 
-const worker = new Worker(new URL('../common/exportwavworker.js', import.meta.url));
-toggleSpinner(true);
-const musicurl = await new Promise(async resolve => {
-    worker.postMessage({wasm: wasmBytes, samplerate: 44100,
-                songduration: 200000});
-    worker.onmessage = msg => {
-        if (msg.data.exportWavUrl) {
-            resolve(msg.data.exportWavUrl);
-        } else {
-            document.querySelector('#loaderprogress').innerHTML = (msg.data.progress*100).toFixed(2) + '%';
-        }            
-    }
-});
-toggleSpinner(false);
-const playerElement = document.querySelector('#player');
-playerElement.src = musicurl;
-//playerElement.play();
+globalThis.onmessage = async (msg) => {
+    
+    const messageOrigin = msg.origin;
+    console.log(messageOrigin);
+
+    const worker = new Worker(new URL('renderworker.js', import.meta.url));
+    toggleSpinner(true);
+    const musicdata = await new Promise(async resolve => {
+        worker.postMessage({
+            wasm: wasmBytes, samplerate: 44100,
+            songduration: 20000
+        });
+        worker.onmessage = msg => {
+            if (msg.data.musicdata) {
+                resolve(msg.data.musicdata);
+            } else {
+                document.querySelector('#loaderprogress').innerHTML = (msg.data.progress * 100).toFixed(2) + '%';
+            }
+        }
+    });
+    toggleSpinner(false);
+
+    globalThis.parent.postMessage({ musicdata }, messageOrigin, [musicdata]);
+};

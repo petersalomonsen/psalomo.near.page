@@ -44,9 +44,28 @@ export default {
 
                 const dataUri = `data:text/html;base64,${Buffer.from(html).toString('base64')}`;
                 writeFileSync(`nearbos.jsx`, `
-return <iframe style={{ width: "500px", height: "230px" }}
-    src="${dataUri}">
-</iframe>;`)
+State.init({musicdata: null, musicrequest: null});
+function playAudio() {
+    State.update({musicrequest: true}); 
+}
+
+function musicReceived(musicdata) {
+    const blob = new Blob([musicdata], {
+        type: "audio/wav"
+    });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio();
+    audio.src = url;
+    audio.play();
+}
+
+const iframe = <iframe message={state.musicrequest} onMessage={(msg) => musicReceived(msg.musicdata)} style={{ width: "500px", height: "230px" }} src="${dataUri}"></iframe>;
+
+return <>
+<button onClick={() => playAudio()}>Play</button>
+{ iframe }
+</>
+`)
             }
         }
     ]

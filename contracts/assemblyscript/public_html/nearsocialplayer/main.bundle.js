@@ -52,22 +52,27 @@ document.getElementById('ownerspan').innerHTML = token_data.owner_id;
 const gzippedBase64 = await getData('view_token_content_base64');
 const wasmBytes = await getWasmBytesFromGzippedBase64(gzippedBase64);
 
-const worker = new Worker(URL.createObjectURL(new Blob([
+globalThis.onmessage = async (msg) => {
+    
+    const messageOrigin = msg.origin;
+    console.log(messageOrigin);
+
+    const worker = new Worker(URL.createObjectURL(new Blob([
                             (() => {
                                 function jsFunc() {onmessage = async (msg) => {
     if (msg.data.wasm) {
         const sampleRate = msg.data.samplerate;
-        const wasmInstancePromise = WebAssembly.instantiate(msg.data.wasm, 
+        const wasmInstancePromise = WebAssembly.instantiate(msg.data.wasm,
             {
                 environment: {
                     SAMPLERATE: sampleRate
                 }
-        });
+            });
         const wasmInstance = (await wasmInstancePromise).instance.exports;
         const patternschedule = msg.data.patternschedule;
         if (patternschedule) {
-            for (let n=0;n<patternschedule.length;n++) {
-                wasmInstance.setMidiPartSchedule(n,patternschedule[n].patternindex, patternschedule[n].starttime);
+            for (let n = 0; n < patternschedule.length; n++) {
+                wasmInstance.setMidiPartSchedule(n, patternschedule[n].patternindex, patternschedule[n].starttime);
             }
         }
         const duration = msg.data.songduration;
@@ -82,7 +87,7 @@ const worker = new Worker(URL.createObjectURL(new Blob([
         const numbuffers = 100;
         const bitDepth = 32;
         const numChannels = 2;
-        
+
         var bytesPerSample = bitDepth / 8;
         var blockAlign = numChannels * bytesPerSample;
 
@@ -124,44 +129,43 @@ const worker = new Worker(URL.createObjectURL(new Blob([
 
         let offset = 44;
         while (wasmInstance.currentTimeMillis.value < duration) {
-            for (let b = 0;b<numbuffers; b++) {
+            for (let b = 0; b < numbuffers; b++) {
                 wasmInstance.playEventsAndFillSampleBuffer();
-                for (let n = 0; n < SAMPLE_FRAMES; n++) {                
+                for (let n = 0; n < SAMPLE_FRAMES; n++) {
                     view.setFloat32(offset, leftbuffer[n], true);
                     offset += 4;
                     view.setFloat32(offset, rightbuffer[n], true);
                     offset += 4;
                 }
             }
-            postMessage({exportWavPosition: wasmInstance.currentTimeMillis.value,
-                    progress: wasmInstance.currentTimeMillis.value / duration});
+            postMessage({
+                exportWavPosition: wasmInstance.currentTimeMillis.value,
+                progress: wasmInstance.currentTimeMillis.value / duration
+            });
             await new Promise(r => setTimeout(r, 0));
         }
-        const blob = new Blob([buffer], {
-            type: "application/octet-stream"
-        });
-
-        const url = URL.createObjectURL(blob);
-        postMessage({ exportWavUrl: url });
+        postMessage({ musicdata: buffer }, [buffer]);
     }
 };}
                                 const jsFuncSource = jsFunc.toString();
                                 return jsFuncSource.substring( jsFuncSource.indexOf('{') + 1,  jsFuncSource.lastIndexOf('}'));
                             })()
                         ], { type: 'text/javascript' })));
-toggleSpinner(true);
-const musicurl = await new Promise(async resolve => {
-    worker.postMessage({wasm: wasmBytes, samplerate: 44100,
-                songduration: 200000});
-    worker.onmessage = msg => {
-        if (msg.data.exportWavUrl) {
-            resolve(msg.data.exportWavUrl);
-        } else {
-            document.querySelector('#loaderprogress').innerHTML = (msg.data.progress*100).toFixed(2) + '%';
-        }            
-    };
-});
-toggleSpinner(false);
-const playerElement = document.querySelector('#player');
-playerElement.src = musicurl;
-playerElement.play();
+    toggleSpinner(true);
+    const musicdata = await new Promise(async resolve => {
+        worker.postMessage({
+            wasm: wasmBytes, samplerate: 44100,
+            songduration: 20000
+        });
+        worker.onmessage = msg => {
+            if (msg.data.musicdata) {
+                resolve(msg.data.musicdata);
+            } else {
+                document.querySelector('#loaderprogress').innerHTML = (msg.data.progress * 100).toFixed(2) + '%';
+            }
+        };
+    });
+    toggleSpinner(false);
+
+    globalThis.parent.postMessage({ musicdata }, messageOrigin, [musicdata]);
+};
