@@ -32,7 +32,7 @@ export default {
                 }
             }
         }))(),
-        //terser(),
+        terser(),
         {
             name: 'inline-js',
             closeBundle: () => {

@@ -57,7 +57,7 @@ toggleSpinner(true);
 const musicdata = await new Promise(async resolve => {
     worker.postMessage({
         wasm: wasmBytes, samplerate: 44100,
-        songduration: 10000
+        songduration: 60000
     });
     worker.onmessage = msg => {
         if (msg.data.musicdata) {
