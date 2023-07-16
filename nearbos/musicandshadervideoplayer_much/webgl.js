@@ -23,7 +23,7 @@ function configureGLContext(source) {
     glContext.compileShader(fragmentShader);
 
     const compiled = glContext.getShaderParameter(fragmentShader, glContext.COMPILE_STATUS);
-    console.log('Shader compiled successfully: ' + compiled);
+
     if (!compiled) {
         const compilationLog = glContext.getShaderInfoLog(fragmentShader);
         throw new Error(compilationLog);
