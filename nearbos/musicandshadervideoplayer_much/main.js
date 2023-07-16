@@ -2,8 +2,9 @@ import { setupWebGL } from './webgl.js';
 import wasmBytesBase64 from './much.wasm.base64.js';
 import shadersource from './shadersource.js';
 import { setProgressbarValue } from './progress-bar.js';
+import { decodeBufferFromPNG } from './png.js';
 
-const wasmBytes = await fetch(wasmBytesBase64).then(r => r.arrayBuffer());
+const wasmBytes = await decodeBufferFromPNG(wasmBytesBase64);
 
 const sampleRate = 44100;
 
@@ -22,6 +23,10 @@ const playbutton = document.getElementById('playbutton');
 const worker = new Worker(new URL('renderworker.js', import.meta.url), { type: 'module' });
 
 const buffers = [];
+
+const scrollTextElement = document.querySelector('#scrolltext');
+let scrollTextElementPos = document.documentElement.clientWidth;
+scrollTextElement.style.left = `${scrollTextElementPos}px`;
 
 async function createBuffers(sendWasm = false) {
     const { leftbuffer, rightbuffer, activeVoicesStatusSnaphots } = await new Promise(async resolve => {
@@ -55,36 +60,13 @@ const result = await fetch('https://rpc.mainnet.near.org', {
             "finality": "final",
             "account_id": "jsinrustnft.near",
             "method_name": "nft_token",
-            "args_base64": btoa(JSON.stringify({ token_id: 'aliens_close' }))
+            "args_base64": btoa(JSON.stringify({ token_id: 'much' }))
         }
     })
 }).then(r => r.json());
 const nftdata = JSON.parse(result.result.result.map(c => String.fromCharCode(c)).join(''));
+scrollTextElement.innerHTML = `${nftdata?.owner_id} presents ${nftdata?.token_id}`;
 
-async function createWelcomeImage() {
-
-    // Create the offscreen canvas element
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-
-    // Set canvas dimensions based on the text size
-    canvas.width = 1152;
-    canvas.height = 1280;
-
-    // Set canvas size and drawing context
-    context.font = "70px Arial";
-
-    // Set text color and draw text onto the canvas
-    context.fillStyle = '#fff';
-    const owner_width = context.measureText(nftdata.owner_id).width;
-    const id_width = context.measureText(nftdata.token_id).width;
-
-    context.fillText(nftdata.owner_id, (canvas.width - owner_width) / 2, 400);
-    context.fillText('proudly presents', 350, 500);
-    context.fillText(nftdata.token_id, (canvas.width - id_width) / 2, 600);
-
-    return canvas.toDataURL();
-}
 
 let chunkStartTime;
 
@@ -187,6 +169,15 @@ playbutton.onclick = async () => {
         chunkStartTime = audioCtx.currentTime + bufferingtime;
         songStartTime = chunkStartTime;
         startAudioBufSrcNode();
+
+        const scrollText = () => requestAnimationFrame(() => {
+            scrollTextElement.style.left = `${scrollTextElementPos--}px`;
+            if (scrollTextElementPos === -scrollTextElement.clientWidth) {
+                scrollTextElementPos = document.documentElement.clientWidth;
+            }
+            scrollText();
+        });
+        scrollText();
     } catch (e) {
         setProgressbarValue(null);
         document.body.innerHTML = e;

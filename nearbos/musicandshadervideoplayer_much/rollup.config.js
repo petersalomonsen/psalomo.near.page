@@ -47,6 +47,11 @@ export default [
                 writeFileSync(`index.bundle.html`, html);
                 unlinkSync('main.bundle.js');
                 unlinkSync('renderworker.bundle.js');
+
+                const dataUri = `data:text/html;,${encodeURIComponent(html)}`;
+                const widgetjsx = readFileSync('widget.jsx').toString();
+
+                writeFileSync(`nearbos.jsx`, widgetjsx.replace('IFRAME_DATA_URI', dataUri));
             }
         }
     ]
